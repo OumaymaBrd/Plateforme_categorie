@@ -47,11 +47,4 @@ Créer un environnement où les auteurs et passionnés d’art peuvent partager,
 
 ---
 
-## Scripts SQL Requis  
 
-### Requêtes utiles :  
-1. **Nombre total d'articles par catégorie**  
-   ```sql
-   SELECT categorie, COUNT(*) AS total_articles
-   FROM articles
-   GROUP BY categorie;
