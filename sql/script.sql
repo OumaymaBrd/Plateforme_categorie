@@ -40,5 +40,9 @@ alter table user_
 add COLUMN matricule varchar(500);
 
 
+--
+ALTER table article 
+add COLUMN image blob ;
+
 
     
