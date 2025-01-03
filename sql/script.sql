@@ -46,3 +46,10 @@ add COLUMN image blob ;
 
 
     
+ALTER TABLE catégories 
+ADD COLUMN supprime TINYINT DEFAULT 0;
+
+
+alter table article 
+add COLUMN nom_categorie varchar(100);
+

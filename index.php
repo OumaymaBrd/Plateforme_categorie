@@ -5,7 +5,6 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/models/user.php';
 require_once __DIR__ . '/database/bdd.php';
-
 $database = new Database();
 $db = $database->getConnection();
 $user = new User($db);
@@ -25,27 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     }
 }
 
-// Handle login
-// Handle login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     $matricule = trim($_POST['matricule']);
     $password = $_POST['login_password'];
 
-    $result = $user->login($matricule, $password);
+    $result = $user->getUserByMatricule($matricule, $password);
     if ($result) {
         $_SESSION['user'] = $result;
         if ($result['post'] === 'admin') {
             header("Location: assets/pages/administration.php");
-        } else if ($result['post'] === 'reader' || $result['post'] === 'auteur') {
-            header("Location: assets/pages/principale.php");
+        } else if ($result['post'] === 'auteur') {
+            header("Location: assets/pages/auteur.php?id=" . $result['id_user']);
+        } else if ($result['post'] === 'reader') {
+            // Redirect to reader page if needed
+            // header("Location: assets/pages/reader.php");
         }
         exit();
     } else {
         $login_error = "Matricule ou mot de passe incorrect.";
     }
 }
-
-
 ?>
 
 <!doctype html>
@@ -66,8 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     <?php echo htmlspecialchars($success_message); ?>
                 </div>
             <?php endif; ?>
-
-			<!--  -->
             
             <?php if (isset($error_message)): ?>
                 <div class="alert alert-danger text-center" role="alert">
@@ -83,33 +79,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                         <label for="reg-log"></label>
                         <div class="card-3d-wrap mx-auto">
                             <div class="card-3d-wrapper">
-                                <!-- Remplacer la section du formulaire de login par: -->
-<div class="card-front">
-    <div class="center-wrap">
-        <div class="section text-center">
-            <h4 class="mb-4 pb-3">Log In</h4>
-            <form method="POST" action="">
-                <div class="form-group">
-                    <input type="text" name="matricule" class="form-style" 
-                           placeholder="Votre Matricule" required>
-                    <i class="input-icon uil uil-user"></i>
-                </div>    
-                <div class="form-group mt-2">
-                    <input type="password" name="login_password" class="form-style" 
-                           placeholder="Password" required>
-                    <i class="input-icon uil uil-lock-alt"></i>
-                </div>
-                <button type="submit" name="login" class="btn mt-4">Login</button>
-                <?php if (isset($login_error)): ?>
-                    <p class="text-danger mt-3"><?php echo htmlspecialchars($login_error); ?></p>
-                <?php endif; ?>
-                <p class="mb-0 mt-4 text-center">
-                    <a href="#" class="link">Forgot your password?</a>
-                </p>
-            </form>
-        </div>
-    </div>
-</div>
+                                <div class="card-front">
+                                    <div class="center-wrap">
+                                        <div class="section text-center">
+                                            <h4 class="mb-4 pb-3">Log In</h4>
+                                            <form method="POST" action="">
+                                                <div class="form-group">
+                                                    <input type="text" name="matricule" class="form-style" 
+                                                           placeholder="Votre Matricule" required>
+                                                    <i class="input-icon uil uil-user"></i>
+                                                </div>    
+                                                <div class="form-group mt-2">
+                                                    <input type="password" name="login_password" class="form-style" 
+                                                           placeholder="Password" required>
+                                                    <i class="input-icon uil uil-lock-alt"></i>
+                                                </div>
+                                                <button type="submit" name="login" class="btn mt-4">Login</button>
+                                                <?php if (isset($login_error)): ?>
+                                                    <p class="text-danger mt-3"><?php echo htmlspecialchars($login_error); ?></p>
+                                                <?php endif; ?>
+                                                <p class="mb-0 mt-4 text-center">
+                                                    <a href="#" class="link">Forgot your password?</a>
+                                                </p>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="card-back">
                                     <div class="center-wrap">
                                         <div class="section text-center">
@@ -157,3 +152,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     </div>
 </body>
 </html>
+
