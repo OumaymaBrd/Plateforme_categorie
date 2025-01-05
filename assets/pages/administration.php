@@ -150,7 +150,7 @@ if ($categoriesResult['success']) {
         <h1 class="mb-4">Tableau de bord administrateur</h1>
 
         <?php if (isset($message)): ?>
-            <div class="alert alert-success" role="alert">
+            <div id="successMessage" class="alert alert-success" role="alert">
                 <?php echo $message; ?>
             </div>
         <?php endif; ?>
@@ -422,6 +422,24 @@ if ($categoriesResult['success']) {
         $(document).ready(function() {
             $('#myTab a[href="#<?php echo $activeTab; ?>"]').tab('show');
         });
+    </script>
+    <script>
+        // Fonction pour masquer le message de succès
+        function hideSuccessMessage() {
+            var successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                setTimeout(function() {
+                    successMessage.style.transition = 'opacity 1s';
+                    successMessage.style.opacity = '0';
+                    setTimeout(function() {
+                        successMessage.style.display = 'none';
+                    }, 1000);
+                }, 3000);
+            }
+        }
+
+        // Appeler la fonction au chargement de la page
+        window.onload = hideSuccessMessage;
     </script>
 </body>
 </html>
