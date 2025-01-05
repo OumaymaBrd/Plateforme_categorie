@@ -155,6 +155,12 @@ if ($categoriesResult['success']) {
     $error = "Erreur lors de la récupération des catégories : " . $categoriesResult['error'];
     $categories = [];
 }
+
+// Fetch statistics
+$articleStatusStats = $admin->getArticleStatusStats();
+$userBlockStats = $admin->getUserBlockStats();
+$articleCategoryStats = $admin->getArticleCountByCategory();
+
 ?>
 
 <!DOCTYPE html>
@@ -164,6 +170,7 @@ if ($categoriesResult['success']) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord administrateur</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .article-image {
             width: 100px;
@@ -219,305 +226,347 @@ if ($categoriesResult['success']) {
             font-weight: bold;
             cursor: pointer;
         }
+
+        /* Styles pour le menu latéral */
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 300px; /* Ajustez cette valeur en fonction de la largeur de votre sidebar */
+        }
+
+        .chart-container {
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Tableau de bord administrateur</h1>
-
-        <?php if (isset($message)): ?>
-            <div id="successMessage" class="alert alert-success" role="alert">
-                <?php echo $message; ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if (isset($error)): ?>
-            <div class="alert alert-danger" role="alert">
-                <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
-
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'articles' ? 'active' : ''; ?>" id="articles-tab" data-toggle="tab" href="#articles" role="tab">Articles</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'users' ? 'active' : ''; ?>" id="users-tab" data-toggle="tab" href="#users" role="tab">Utilisateurs</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $activeTab === 'categories' ? 'active' : ''; ?>" id="categories-tab" data-toggle="tab" href="#categories" role="tab">Catégories</a>
-            </li>
-        </ul>
-
-        <div class="tab-content mt-3" id="myTabContent">
-            <div class="tab-pane fade <?php echo $activeTab === 'articles' ? 'show active' : ''; ?>" id="articles" role="tabpanel">
-                <h2>Gestion des articles</h2>
-                <div class="mb-3">
-                    <a href="?tab=articles&article_status=confirme" class="btn btn-outline-primary">Articles confirmés</a>
-                    <a href="?tab=articles&article_status=nom confirme" class="btn btn-outline-primary">Articles non confirmés</a>
-                    <a href="?tab=articles" class="btn btn-outline-secondary">Tous les articles</a>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="position-sticky">
+                    <h3 class="mb-3">Statistiques</h3>
+                    <div class="chart-container">
+                        <canvas id="articleStatusChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="userBlockChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="articleCategoryChart"></canvas>
+                    </div>
                 </div>
-                <?php if (empty($articles)): ?>
-                    <p>Aucun article trouvé.</p>
-                <?php else: ?>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Image</th>
-                                <th>Titre</th>
-                                <th>Description</th>
-                                <th>Auteur</th>
-                                <th>Catégorie</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($articles as $article): ?>
-                            <tr>
-                                <td>
-                                    <?php
-                                    if (!empty($article['image'])) {
-                                        if ($article['image_type'] === 'path') {
-                                            // Construire les chemins
-                                            $fullImagePath = $baseImagePath . basename($article['image']);
-                                            $webPath = $webImagePath . basename($article['image']);
-                                            
-                                            error_log('Checking image at: ' . $fullImagePath);
-                                            error_log('Web path will be: ' . $webPath);
-                                            
-                                            if (file_exists($fullImagePath)) {
-                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(\'' . htmlspecialchars($webPath) . '\')">'; // Modification 4: Appel de openImageModal avec la source correctement échappée
-                                                error_log('Image found and displayed: ' . $webPath);
-                                            } else {
-                                                echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
-                                                error_log('Image file not found: ' . $fullImagePath);
-                                            }
-                                        } else if ($article['image_type'] === 'blob') {
-                                            echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
-                                            error_log('Displaying BLOB image for article ID: ' . $article['id']);
-                                        }
-                                    } else {
-                                        echo 'Pas d\'image';
-                                        error_log('No image for article ID: ' . $article['id']);
-                                    }
-                                    ?>
-                                </td>
-                                <td><?php echo htmlspecialchars($article['titre'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($article['description'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars(($article['prenom'] ?? '') . ' ' . ($article['nom'] ?? '')); ?></td>
-                                <td><?php echo htmlspecialchars($article['nom_categorie'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($article['statut'] ?? ''); ?></td>
-                                <td class="action-buttons">
-                                    <?php if ($article['statut'] == 'nom confirme'): ?>
-                                        <form method="POST">
-                                            <input type="hidden" name="action" value="confirmer_article">
-                                            <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                            <button type="submit" class="btn btn-success btn-sm">Confirmer</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <form method="POST">
-                                            <input type="hidden" name="action" value="annuler_confirmation_article">
-                                            <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                            <button type="submit" class="btn btn-warning btn-sm">Annuler confirmation</button>
-                                        </form>
-                                    <?php endif; ?>
-                                    <form method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article ?');">
-                                        <input type="hidden" name="action" value="supprimer_article">
-                                        <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
+            </nav>
 
-            <!-- Users Tab Content -->
-            <div class="tab-pane fade <?php echo $activeTab === 'users' ? 'show active' : ''; ?>" id="users" role="tabpanel">
-                <h2>Gestion des utilisateurs</h2>
-                <div class="mb-3">
-                    <a href="?tab=users&user_type=auteur" class="btn btn-outline-primary">Auteurs</a>
-                    <a href="?tab=users&user_type=reader" class="btn btn-outline-primary">Lecteurs</a>
-                    <a href="?tab=users&user_status=blocked" class="btn btn-outline-warning">Utilisateurs bloqués</a>
-                    <a href="?tab=users" class="btn btn-outline-secondary">Tous les utilisateurs</a>
-                </div>
-                <?php if (empty($users)): ?>
-                    <p>Aucun utilisateur trouvé.</p>
-                <?php else: ?>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Nom</th>
-                                <th>Email</th>
-                                <th>Type</th>
-                                <?php if ($userStatus === 'blocked'): ?>
-                                    <th>Motif du blocage</th>
-                                <?php endif; ?>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($users as $user): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($user['nom'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($user['post'] ?? ''); ?></td>
-                                <?php if ($userStatus === 'blocked'): ?>
-                                    <td><?php echo htmlspecialchars($user['motif_supprime'] ?? ''); ?></td>
-                                <?php endif; ?>
-                                <td>
-                                    <?php if ($userStatus === 'blocked'): ?>
-                                        <form method="POST" class="d-inline">
-                                            <input type="hidden" name="action" value="debloquer_utilisateur">
-                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                            <button type="submit" class="btn btn-success btn-sm">Débloquer</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#blockUserModal<?php echo $user['id']; ?>">
-                                            Bloquer
-                                        </button>
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="container mt-5">
+                    <h1 class="mb-4">Tableau de bord administrateur</h1>
 
-                                        <!-- Modal pour bloquer l'utilisateur -->
-                                        <div class="modal fade" id="blockUserModal<?php echo $user['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="blockUserModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
+                    <?php if (isset($message)): ?>
+                        <div id="successMessage" class="alert alert-success" role="alert">
+                            <?php echo $message; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger" role="alert">
+                            <?php echo $error; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $activeTab === 'articles' ? 'active' : ''; ?>" id="articles-tab" data-toggle="tab" href="#articles" role="tab">Articles</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $activeTab === 'users' ? 'active' : ''; ?>" id="users-tab" data-toggle="tab" href="#users" role="tab">Utilisateurs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $activeTab === 'categories' ? 'active' : ''; ?>" id="categories-tab" data-toggle="tab" href="#categories" role="tab">Catégories</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-3" id="myTabContent">
+                        <div class="tab-pane fade <?php echo $activeTab === 'articles' ? 'show active' : ''; ?>" id="articles" role="tabpanel">
+                            <h2>Gestion des articles</h2>
+                            <div class="mb-3">
+                                <a href="?tab=articles&article_status=confirme" class="btn btn-outline-primary">Articles confirmés</a>
+                                <a href="?tab=articles&article_status=nom confirme" class="btn btn-outline-primary">Articles non confirmés</a>
+                                <a href="?tab=articles" class="btn btn-outline-secondary">Tous les articles</a>
+                            </div>
+                            <?php if (empty($articles)): ?>
+                                <p>Aucun article trouvé.</p>
+                            <?php else: ?>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Image</th>
+                                            <th>Titre</th>
+                                            <th>Description</th>
+                                            <th>Auteur</th>
+                                            <th>Catégorie</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($articles as $article): ?>
+                                        <tr>
+                                            <td>
+                                                <?php
+                                                if (!empty($article['image'])) {
+                                                    if ($article['image_type'] === 'path') {
+                                                        // Construire les chemins
+                                                        $fullImagePath = $baseImagePath . basename($article['image']);
+                                                        $webPath = $webImagePath . basename($article['image']);
+                                                        
+                                                        error_log('Checking image at: ' . $fullImagePath);
+                                                        error_log('Web path will be: ' . $webPath);
+                                                        
+                                                        if (file_exists($fullImagePath)) {
+                                                            echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(\'' . htmlspecialchars($webPath) . '\')">';
+                                                            error_log('Image found and displayed: ' . $webPath);
+                                                        } else {
+                                                            echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
+                                                            error_log('Image file not found: ' . $fullImagePath);
+                                                        }
+                                                    } else if ($article['image_type'] === 'blob') {
+                                                        echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
+                                                        error_log('Displaying BLOB image for article ID: ' . $article['id']);
+                                                    }
+                                                } else {
+                                                    echo 'Pas d\'image';
+                                                    error_log('No image for article ID: ' . $article['id']);
+                                                }
+                                                ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($article['titre'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($article['description'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars(($article['prenom'] ?? '') . ' ' . ($article['nom'] ?? '')); ?></td>
+                                            <td><?php echo htmlspecialchars($article['nom_categorie'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($article['statut'] ?? ''); ?></td>
+                                            <td class="action-buttons">
+                                                <?php if ($article['statut'] == 'nom confirme'): ?>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="action" value="confirmer_article">
+                                                        <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
+                                                        <button type="submit" class="btn btn-success btn-sm">Confirmer</button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="action" value="annuler_confirmation_article">
+                                                        <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
+                                                        <button type="submit" class="btn btn-warning btn-sm">Annuler confirmation</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                                <form method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article ?');">
+                                                    <input type="hidden" name="action" value="supprimer_article">
+                                                    <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Users Tab Content -->
+                        <div class="tab-pane fade <?php echo $activeTab === 'users' ? 'show active' : ''; ?>" id="users" role="tabpanel">
+                            <h2>Gestion des utilisateurs</h2>
+                            <div class="mb-3">
+                                <a href="?tab=users&user_type=auteur" class="btn btn-outline-primary">Auteurs</a>
+                                <a href="?tab=users&user_type=reader" class="btn btn-outline-primary">Lecteurs</a>
+                                <a href="?tab=users&user_status=blocked" class="btn btn-outline-warning">Utilisateurs bloqués</a>
+                                <a href="?tab=users" class="btn btn-outline-secondary">Tous les utilisateurs</a>
+                            </div>
+                            <?php if (empty($users)): ?>
+                                <p>Aucun utilisateur trouvé.</p>
+                            <?php else: ?>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Email</th>
+                                            <th>Type</th>
+                                            <?php if ($userStatus === 'blocked'): ?>
+                                                <th>Motif du blocage</th>
+                                            <?php endif; ?>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($users as $user): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($user['nom'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($user['post'] ?? ''); ?></td>
+                                            <?php if ($userStatus === 'blocked'): ?>
+                                                <td><?php echo htmlspecialchars($user['motif_supprime'] ?? ''); ?></td>
+                                            <?php endif; ?>
+                                            <td>
+                                                <?php if ($userStatus === 'blocked'): ?>
+                                                    <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="action" value="debloquer_utilisateur">
+                                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                        <button type="submit" class="btn btn-success btn-sm">Débloquer</button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#blockUserModal<?php echo $user['id']; ?>">
+                                                        Bloquer
+                                                    </button>
+
+                                                    <!-- Modal pour bloquer l'utilisateur -->
+                                                    <div class="modal fade" id="blockUserModal<?php echo $user['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="blockUserModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
+                                                        <div class="modal-dialog" role="document">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title" id="blockUserModalLabel<?php echo $user['id']; ?>">Bloquer l'utilisateur</h5>
+                                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                                        <span aria-hidden="true">&times;</span>
+                                                                    </button>
+                                                                </div>
+                                                                <form method="POST">
+                                                                    <div class="modal-body">
+                                                                        <input type="hidden" name="action" value="bloquer_utilisateur">
+                                                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                                        <div class="form-group">
+                                                                            <label for="motif">Motif du blocage:</label>
+                                                                            <textarea class="form-control" id="motif" name="motif" required></textarea>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                                                                        <button type="submit" class="btn btn-danger">Bloquer</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Categories Tab Content -->
+                        <div class="tab-pane fade <?php echo $activeTab === 'categories' ? 'show active' : ''; ?>" id="categories" role="tabpanel">
+                            <h2>Gestion des catégories</h2>
+                            <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#addCategoryModal">
+                                Ajouter une catégorie
+                            </button>
+
+                            <?php if (empty($categories)): ?>
+                                <p>Aucune catégorie trouvée.</p>
+                            <?php else: ?>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($categories as $category): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($category['nom'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars($category['description'] ?? ''); ?></td>
+                                            <td>
+                                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editCategoryModal<?php echo $category['id']; ?>">
+                                                    Modifier
+                                                </button>
+                                                <form method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
+                                                    <input type="hidden" name="action" value="supprimer_categorie">
+                                                    <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Modal pour modifier la catégorie -->
+                                        <div class="modal fade" id="editCategoryModal<?php echo $category['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="editCategoryModalLabel<?php echo $category['id']; ?>" aria-hidden="true">
                                             <div class="modal-dialog" role="document">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h5 class="modal-title" id="blockUserModalLabel<?php echo $user['id']; ?>">Bloquer l'utilisateur</h5>
+                                                        <h5 class="modal-title" id="editCategoryModalLabel<?php echo $category['id']; ?>">Modifier la catégorie</h5>
                                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                                             <span aria-hidden="true">&times;</span>
                                                         </button>
                                                     </div>
                                                     <form method="POST">
                                                         <div class="modal-body">
-                                                            <input type="hidden" name="action" value="bloquer_utilisateur">
-                                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                            <input type="hidden" name="action" value="modifier_categorie">
+                                                            <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
                                                             <div class="form-group">
-                                                                <label for="motif">Motif du blocage:</label>
-                                                                <textarea class="form-control" id="motif" name="motif" required></textarea>
+                                                                <label for="nom">Nom de la catégorie:</label>
+                                                                <input type="text" class="form-control" id="nom" name="nom" value="<?php echo htmlspecialchars($category['nom']); ?>" required>
+                                                            </div>
+                                                            <div class="form-group">
+                                                                <label for="description">Description:</label>
+                                                                <textarea class="form-control" id="description" name="description" required><?php echo htmlspecialchars($category['description']); ?></textarea>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                            <button type="submit" class="btn btn-danger">Bloquer</button>
+                                                            <button type="submit" class="btn btn-primary">Modifier</button>
                                                         </div>
                                                     </form>
                                                 </div>
                                             </div>
                                         </div>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
 
-            <!-- Categories Tab Content -->
-            <div class="tab-pane fade <?php echo $activeTab === 'categories' ? 'show active' : ''; ?>" id="categories" role="tabpanel">
-                <h2>Gestion des catégories</h2>
-                <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#addCategoryModal">
-                    Ajouter une catégorie
-                </button>
-
-                <?php if (empty($categories)): ?>
-                    <p>Aucune catégorie trouvée.</p>
-                <?php else: ?>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Nom</th>
-                                <th>Description</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($categories as $category): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($category['nom'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($category['description'] ?? ''); ?></td>
-                                <td>
-                                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editCategoryModal<?php echo $category['id']; ?>">
-                                        Modifier
-                                    </button>
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
-                                        <input type="hidden" name="action" value="supprimer_categorie">
-                                        <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                                    </form>
-                                </td>
-                            </tr>
-
-                            <!-- Modal pour modifier la catégorie -->
-                            <div class="modal fade" id="editCategoryModal<?php echo $category['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="editCategoryModalLabel<?php echo $category['id']; ?>" aria-hidden="true">
+                            <!-- Modal pour ajouter une catégorie -->
+                            <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="editCategoryModalLabel<?php echo $category['id']; ?>">Modifier la catégorie</h5>
+                                            <h5 class="modal-title" id="addCategoryModalLabel">Ajouter une catégorie</h5>
                                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
                                         </div>
                                         <form method="POST">
                                             <div class="modal-body">
-                                                <input type="hidden" name="action" value="modifier_categorie">
-                                                <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
+                                                <input type="hidden" name="action" value="ajouter_categorie">
                                                 <div class="form-group">
                                                     <label for="nom">Nom de la catégorie:</label>
-                                                    <input type="text" class="form-control" id="nom" name="nom" value="<?php echo htmlspecialchars($category['nom']); ?>" required>
+                                                    <input type="text" class="form-control" id="nom" name="nom" required>
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="description">Description:</label>
-                                                    <textarea class="form-control" id="description" name="description" required><?php echo htmlspecialchars($category['description']); ?></textarea>
+                                                    <textarea class="form-control" id="description" name="description" required></textarea>
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                <button type="submit" class="btn btn-primary">Modifier</button>
+                                                <button type="submit" class="btn btn-primary">Ajouter</button>
                                             </div>
                                         </form>
                                     </div>
                                 </div>
                             </div>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-
-                <!-- Modal pour ajouter une catégorie -->
-                <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
-                    <div class="modal-dialog" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="addCategoryModalLabel">Ajouter une catégorie</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <form method="POST">
-                                <div class="modal-body">
-                                    <input type="hidden" name="action" value="ajouter_categorie">
-                                    <div class="form-group">
-                                        <label for="nom">Nom de la catégorie:</label>
-                                        <input type="text" class="form-control" id="nom" name="nom" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="description">Description:</label>
-                                        <textarea class="form-control" id="description" name="description" required></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                    <button type="submit" class="btn btn-primary">Ajouter</button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 
@@ -571,7 +620,6 @@ if ($categoriesResult['success']) {
             }
         }
 
-        // Modification 3: Fonction closeImageModal et gestionnaires d'événements
         function closeImageModal() {
             document.getElementById("imageModal").style.display = "none";
         }
@@ -592,6 +640,80 @@ if ($categoriesResult['success']) {
             console.error("Erreur de chargement de l'image");
             closeImageModal();
         };
+
+        // Création des graphiques
+        function createCharts() {
+            // Graphique pour le statut des articles
+            var articleStatusCtx = document.getElementById('articleStatusChart').getContext('2d');
+            new Chart(articleStatusCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Confirmés', 'Non confirmés'],
+                    datasets: [{
+                        data: [<?php echo $articleStatusStats['data']['confirme']; ?>, <?php echo $articleStatusStats['data']['non_confirme']; ?>],
+                        backgroundColor: ['#36a2eb', '#ff6384']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Statut des articles'
+                    }
+                }
+            });
+
+            // Graphique pour les utilisateurs bloqués/non bloqués
+            var userBlockCtx = document.getElementById('userBlockChart').getContext('2d');
+            new Chart(userBlockCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Non bloqués', 'Bloqués'],
+                    datasets: [{
+                        data: [<?php echo $userBlockStats['data']['non_bloques']; ?>, <?php echo $userBlockStats['data']['bloques']; ?>],
+                        backgroundColor: ['#4bc0c0', '#ff9f40']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Statut des utilisateurs'
+                    }
+                }
+            });
+
+            // Graphique pour le nombre d'articles par catégorie
+            var articleCategoryCtx = document.getElementById('articleCategoryChart').getContext('2d');
+            new Chart(articleCategoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: [<?php echo implode(', ', array_map(function($item) { return "'" . $item['category'] . "'"; }, $articleCategoryStats['data'])); ?>],
+                    datasets: [{
+                        label: 'Nombre d\'articles',
+                        data: [<?php echo implode(', ', array_map(function($item) { return $item['count']; }, $articleCategoryStats['data'])); ?>],
+                        backgroundColor: '#ff6384'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Articles par catégorie'
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+        }
+
+        // Appeler la fonction pour créer les graphiques au chargement de la page
+        document.addEventListener('DOMContentLoaded', createCharts);
     </script>
 </body>
 </html>

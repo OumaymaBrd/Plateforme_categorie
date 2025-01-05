@@ -256,7 +256,7 @@ class Admin {
 
     public function debloquerProfil($userId) {
         try {
-            $query = "UPDATE user_ SET supprime = 0,  motif_supprime = 'Avertissement' WHERE id = :id";
+            $query = "UPDATE user_ SET supprime = 0, motif_supprime = NULL WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id', $userId);
             
@@ -349,6 +349,53 @@ class Admin {
             }
         } catch(PDOException $e) {
             error_log("Error fetching user by ID: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function getArticleStatusStats() {
+        try {
+            $query = "SELECT 
+                        SUM(CASE WHEN statut = 'confirme' THEN 1 ELSE 0 END) as confirme,
+                        SUM(CASE WHEN statut = 'nom confirme' THEN 1 ELSE 0 END) as non_confirme
+                      FROM article
+                      WHERE supprimer = 0";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return ['success' => true, 'data' => $stmt->fetch(PDO::FETCH_ASSOC)];
+        } catch(PDOException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function getUserBlockStats() {
+        try {
+            $query = "SELECT 
+                        SUM(CASE WHEN supprime = 0 THEN 1 ELSE 0 END) as non_bloques,
+                        SUM(CASE WHEN supprime = 1 THEN 1 ELSE 0 END) as bloques
+                      FROM user_";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return ['success' => true, 'data' => $stmt->fetch(PDO::FETCH_ASSOC)];
+        } catch(PDOException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function getArticleCountByCategory() {
+        try {
+            $query = "SELECT 
+                        c.nom as category,
+                        COUNT(a.id) as count
+                      FROM categories c
+                      LEFT JOIN article a ON c.id = a.id_categorie AND a.supprimer = 0
+                      GROUP BY c.id
+                      ORDER BY count DESC
+                      LIMIT 5";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+        } catch(PDOException $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
