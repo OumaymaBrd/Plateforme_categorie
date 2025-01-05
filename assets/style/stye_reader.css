@@ -1,0 +1,98 @@
+:root {
+    --primary-color: #ff3b3b;
+    --secondary-color: #1a1a1a;
+    --text-color: #ffffff;
+    --card-bg: #2a2a2a;
+    --hover-color: #ff5555;
+}
+body {
+    background-color: #000000;
+    color: var(--text-color);
+    font-family: 'Arial', sans-serif;
+}
+.navbar {
+    background: linear-gradient(to right, var(--secondary-color), #000000);
+    padding: 1rem 0;
+}
+.navbar-brand, .nav-link {
+    color: var(--text-color) !important;
+    transition: color 0.3s ease;
+}
+.navbar-brand:hover, .nav-link:hover {
+    color: var(--primary-color) !important;
+}
+.btn-primary {
+    background: linear-gradient(to right, var(--primary-color), #ff6b6b);
+    border: none;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    background: linear-gradient(to right, #ff6b6b, var(--primary-color));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 59, 59, 0.3);
+}
+.card {
+    background-color: var(--card-bg);
+    border: none;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(255, 59, 59, 0.2);
+}
+.card-title {
+    color: var(--primary-color);
+}
+.article-thumbnail {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+}
+.article-image {
+    max-height: 400px;
+    width: 100%;
+    object-fit: contain;
+}
+.image-placeholder {
+    height: 200px;
+    background-color: var(--secondary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+.pagination .page-link {
+    background-color: var(--secondary-color);
+    border-color: var(--primary-color);
+    color: var(--text-color);
+}
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.category-select {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 0.25rem;
+}
+.category-select option {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+}
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(255, 59, 59, 0.25);
+}
+h2 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
