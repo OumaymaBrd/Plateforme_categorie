@@ -1,4 +1,20 @@
 <?php
+// Activer l'affichage des erreurs pour le débogage
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Définir les chemins pour les images
+$baseImagePath = __DIR__ . '/../images/'; // Chemin système
+$webImagePath = '../images/'; // Chemin web relatif
+
+error_log('Base image directory path: ' . $baseImagePath);
+if (!is_dir($baseImagePath)) {
+    error_log('WARNING: Images directory does not exist: ' . $baseImagePath);
+} else {
+    error_log('Images directory exists and is ' . (is_writable($baseImagePath) ? 'writable' : 'not writable'));
+}
+
 require_once __DIR__ . '/../../models/Admin.php';
 require_once __DIR__ . '/../../database/bdd.php';
 
@@ -58,6 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $activeTab = 'users';
                 break;
+            case 'debloquer_utilisateur':
+                if (isset($_POST['user_id'])) {
+                    $result = $admin->debloquerProfil($_POST['user_id']);
+                    if ($result['success']) {
+                        $message = "Utilisateur débloqué avec succès.";
+                    } else {
+                        $error = "Erreur lors du déblocage de l'utilisateur : " . $result['error'];
+                    }
+                }
+                $activeTab = 'users';
+                break;
             case 'ajouter_categorie':
                 if (isset($_POST['nom']) && isset($_POST['description'])) {
                     $result = $admin->ajouterCategorie($_POST['nom'], $_POST['description']);
@@ -98,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get filter parameters
 $articleStatus = isset($_GET['article_status']) ? $_GET['article_status'] : null;
 $userType = isset($_GET['user_type']) ? $_GET['user_type'] : null;
+$userStatus = isset($_GET['user_status']) ? $_GET['user_status'] : 'active';
 
 // Fetch data
 $articlesResult = $admin->getArticles($articleStatus);
@@ -108,7 +136,11 @@ if ($articlesResult['success']) {
     $articles = [];
 }
 
-$usersResult = $admin->consulterProfils($userType);
+if ($userStatus === 'blocked') {
+    $usersResult = $admin->consulterProfilsBloques($userType);
+} else {
+    $usersResult = $admin->consulterProfils($userType);
+}
 if ($usersResult['success']) {
     $users = $usersResult['data'];
 } else {
@@ -123,7 +155,6 @@ if ($categoriesResult['success']) {
     $error = "Erreur lors de la récupération des catégories : " . $categoriesResult['error'];
     $categories = [];
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -138,7 +169,19 @@ if ($categoriesResult['success']) {
             width: 100px;
             height: 100px;
             object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 2px;
         }
+        
+        .article-image:not([src]) {
+            display: none;
+        }
+        
+        td {
+            vertical-align: middle !important;
+        }
+        
         .action-buttons {
             display: flex;
             gap: 5px;
@@ -202,14 +245,28 @@ if ($categoriesResult['success']) {
                                 <td>
                                     <?php
                                     if (!empty($article['image'])) {
-                                        $imagePath = '../images/' . $article['image'];
-                                        if (file_exists($imagePath)) {
-                                            echo '<img src="' . $imagePath . '" alt="Image de l\'article" class="article-image">';
-                                        } else {
+                                        if ($article['image_type'] === 'path') {
+                                            // Construire les chemins
+                                            $fullImagePath = $baseImagePath . basename($article['image']);
+                                            $webPath = $webImagePath . basename($article['image']);
+                                            
+                                            error_log('Checking image at: ' . $fullImagePath);
+                                            error_log('Web path will be: ' . $webPath);
+                                            
+                                            if (file_exists($fullImagePath)) {
+                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image">';
+                                                error_log('Image found and displayed: ' . $webPath);
+                                            } else {
+                                                echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
+                                                error_log('Image file not found: ' . $fullImagePath);
+                                            }
+                                        } else if ($article['image_type'] === 'blob') {
                                             echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image">';
+                                            error_log('Displaying BLOB image for article ID: ' . $article['id']);
                                         }
                                     } else {
                                         echo 'Pas d\'image';
+                                        error_log('No image for article ID: ' . $article['id']);
                                     }
                                     ?>
                                 </td>
@@ -245,11 +302,13 @@ if ($categoriesResult['success']) {
                 <?php endif; ?>
             </div>
 
+            <!-- Users Tab Content -->
             <div class="tab-pane fade <?php echo $activeTab === 'users' ? 'show active' : ''; ?>" id="users" role="tabpanel">
                 <h2>Gestion des utilisateurs</h2>
                 <div class="mb-3">
                     <a href="?tab=users&user_type=auteur" class="btn btn-outline-primary">Auteurs</a>
                     <a href="?tab=users&user_type=reader" class="btn btn-outline-primary">Lecteurs</a>
+                    <a href="?tab=users&user_status=blocked" class="btn btn-outline-warning">Utilisateurs bloqués</a>
                     <a href="?tab=users" class="btn btn-outline-secondary">Tous les utilisateurs</a>
                 </div>
                 <?php if (empty($users)): ?>
@@ -261,6 +320,9 @@ if ($categoriesResult['success']) {
                                 <th>Nom</th>
                                 <th>Email</th>
                                 <th>Type</th>
+                                <?php if ($userStatus === 'blocked'): ?>
+                                    <th>Motif du blocage</th>
+                                <?php endif; ?>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -270,38 +332,49 @@ if ($categoriesResult['success']) {
                                 <td><?php echo htmlspecialchars($user['nom'] ?? ''); ?></td>
                                 <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
                                 <td><?php echo htmlspecialchars($user['post'] ?? ''); ?></td>
+                                <?php if ($userStatus === 'blocked'): ?>
+                                    <td><?php echo htmlspecialchars($user['motif_supprime'] ?? ''); ?></td>
+                                <?php endif; ?>
                                 <td>
-                                    <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#blockUserModal<?php echo $user['id']; ?>">
-                                        Bloquer
-                                    </button>
+                                    <?php if ($userStatus === 'blocked'): ?>
+                                        <form method="POST" class="d-inline">
+                                            <input type="hidden" name="action" value="debloquer_utilisateur">
+                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                            <button type="submit" class="btn btn-success btn-sm">Débloquer</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#blockUserModal<?php echo $user['id']; ?>">
+                                            Bloquer
+                                        </button>
 
-                                    <!-- Modal pour bloquer l'utilisateur -->
-                                    <div class="modal fade" id="blockUserModal<?php echo $user['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="blockUserModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
-                                        <div class="modal-dialog" role="document">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="blockUserModalLabel<?php echo $user['id']; ?>">Bloquer l'utilisateur</h5>
-                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                        <span aria-hidden="true">&times;</span>
-                                                    </button>
-                                                </div>
-                                                <form method="POST">
-                                                    <div class="modal-body">
-                                                        <input type="hidden" name="action" value="bloquer_utilisateur">
-                                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                        <div class="form-group">
-                                                            <label for="motif">Motif du blocage:</label>
-                                                            <textarea class="form-control" id="motif" name="motif" required></textarea>
+                                        <!-- Modal pour bloquer l'utilisateur -->
+                                        <div class="modal fade" id="blockUserModal<?php echo $user['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="blockUserModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
+                                            <div class="modal-dialog" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="blockUserModalLabel<?php echo $user['id']; ?>">Bloquer l'utilisateur</h5>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                            <span aria-hidden="true">&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <form method="POST">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="action" value="bloquer_utilisateur">
+                                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                            <div class="form-group">
+                                                                <label for="motif">Motif du blocage:</label>
+                                                                <textarea class="form-control" id="motif" name="motif" required></textarea>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                        <button type="submit" class="btn btn-danger">Bloquer</button>
-                                                    </div>
-                                                </form>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                                                            <button type="submit" class="btn btn-danger">Bloquer</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -310,6 +383,7 @@ if ($categoriesResult['success']) {
                 <?php endif; ?>
             </div>
 
+            <!-- Categories Tab Content -->
             <div class="tab-pane fade <?php echo $activeTab === 'categories' ? 'show active' : ''; ?>" id="categories" role="tabpanel">
                 <h2>Gestion des catégories</h2>
                 <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#addCategoryModal">
@@ -422,8 +496,7 @@ if ($categoriesResult['success']) {
         $(document).ready(function() {
             $('#myTab a[href="#<?php echo $activeTab; ?>"]').tab('show');
         });
-    </script>
-    <script>
+
         // Fonction pour masquer le message de succès
         function hideSuccessMessage() {
             var successMessage = document.getElementById('successMessage');
