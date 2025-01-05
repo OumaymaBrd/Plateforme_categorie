@@ -307,12 +307,8 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         }
 
         .modal-content {
-            background-color: black;
-            color: white;
-        }
-
-        .modal-content label {
-            color: red;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
         }
 
         .article-image {
@@ -378,7 +374,7 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         }
     </style>
 </head>
-<body<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-64 sidebar overflow-y-auto">
         <div class="p-4">
@@ -575,7 +571,7 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
                                                     <form method="POST" class="inline-block">
                                                         <input type="hidden" name="action" value="debloquer_utilisateur">
                                                         <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                        <button type="submit" class="bg-green-500hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs">Débloquer</button>
+                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs">Débloquer</button>
                                                     </form>
                                                 <?php else: ?>
                                                     <button type="button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs" onclick="openBlockUserModal(<?php echo $user['id']; ?>)">
@@ -648,9 +644,9 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                         Bloquer l'utilisateur
                     </h3>
                     <div class="mt-2">
@@ -658,13 +654,13 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
                             <input type="hidden" name="action" value="bloquer_utilisateur">
                             <input type="hidden" name="user_id" id="blockUserId">
                             <div class="mb-4">
-                                <label for="motif" class="block text-sm font-medium text-red-500">Motif du blocage:</label>
-                                <textarea id="motif" name="motif" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
+                                <label for="motif" class="block text-sm font-medium text-gray-700">Motif du blocage:</label>
+                                <textarea id="motif" name="motif" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required></textarea>
                             </div>
                         </form>
                     </div>
                 </div>
-                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" form="blockUserForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
                         Bloquer
                     </button>
@@ -681,26 +677,54 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                         Ajouter une catégorie
                     </h3>
                     <div class="mt-2">
-                        <form id="addCategoryForm" method="POST">
-                            <input type="hidden" name="action" value="ajouter_categorie">
-                            <div class="mb-4">
-                                <label for="nom" class="block text-sm font-medium text-red-500">Nom de la catégorie:</label>
-                                <input type="text" id="nom" name="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required>
-                            </div>
-                            <div class="mb-4">
-                                <label for="description" class="block text-sm font-medium text-red-500">Description:</label>
-                                <textarea id="description" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
-                            </div>
-                        </form>
+                    export default function StyledForm() {
+  return (
+    <form id="addCategoryForm" method="POST" className="bg-black p-6 rounded-lg">
+      <input type="hidden" name="action" value="ajouter_categorie" />
+      <div className="mb-4">
+        <label htmlFor="nom" className="block text-sm font-medium text-red-500 mb-2">
+          Nom de la catégorie:
+        </label>
+        <input
+          type="text"
+          id="nom"
+          name="nom"
+          className="mt-1 block w-full rounded-md border-gray-600 bg-gray-800 text-white placeholder-gray-400 shadow-sm focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="description" className="block text-sm font-medium text-red-500 mb-2">
+          Description:
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          rows={3}
+          className="mt-1 block w-full rounded-md border-gray-600 bg-gray-800 text-white placeholder-gray-400 shadow-sm focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+          required
+        ></textarea>
+      </div>
+      <button
+        type="submit"
+        className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+      >
+        Ajouter la catégorie
+      </button>
+    </form>
+  )
+}
+
+
                     </div>
                 </div>
-                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" form="addCategoryForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
                         Ajouter
                     </button>
@@ -717,9 +741,9 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                         Modifier la catégorie
                     </h3>
                     <div class="mt-2">
@@ -727,17 +751,17 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
                             <input type="hidden" name="action" value="modifier_categorie">
                             <input type="hidden" name="id" id="editCategoryId">
                             <div class="mb-4">
-                                <label for="editNom" class="block text-sm font-medium text-red-500">Nom de la catégorie:</label>
-                                <input type="text" id="editNom" name="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required>
+                                <label for="editNom" class="block text-sm font-medium text-gray-700">Nom de la catégorie:</label>
+                                <input type="text" id="editNom" name="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
                             </div>
                             <div class="mb-4">
-                                <label for="editDescription" class="block text-sm font-medium text-red-500">Description:</label>
-                                <textarea id="editDescription" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
+                                <label for="editDescription" class="block text-sm font-medium text-gray-700">Description:</label>
+                                <textarea id="editDescription" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required></textarea>
                             </div>
                         </form>
                     </div>
                 </div>
-                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" form="editCategoryForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
                         Modifier
                     </button>
