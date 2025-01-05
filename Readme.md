@@ -32,4 +32,31 @@ Cette plateforme a pour but de promouvoir l'art et la culture en offrant aux uti
 - ![JavaScript](https://img.shields.io/badge/JavaScript-1.1%25-F7DF1E.svg) JavaScript
 - 🗄️ PDO pour la base de données
 
-## 📂 Structure du Projet
+
+## 🛠️ Fonctionnalités
+
+### 👑 Administration
+- Gestion complète des catégories
+- Modération des utilisateurs
+- Validation des articles
+
+### 👤 Utilisateurs
+- Système d'authentification sécurisé
+- Navigation intuitive par catégories
+- Pagination dynamique
+
+### ✍️ Auteurs
+- Publication d'articles
+- Gestion de contenu personnalisé
+
+## ⚙️ Installation
+
+```bash
+# Cloner le repository
+git clone https://github.com/OumaymaBrd/Plateforme_categorie.git
+
+# Accéder au dossier
+cd Plateforme_categorie
+
+# Installer les dépendances (si nécessaire)
+composer install
