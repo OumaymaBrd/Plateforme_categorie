@@ -73,6 +73,17 @@ $articles = $auteur->getArticlesByAuteurAndCategory($auteur_id, $selected_catego
 $categories = $auteur->getAllCategories();
 
 if ($is_ajax) {
+    // Ajuster les chemins d'images pour les requêtes AJAX
+    foreach ($articles as &$article) {
+        if (!empty($article['image'])) {
+            $image_path = $article['image'];
+            if (!file_exists($image_path) && file_exists('../../' . $image_path)) {
+                $article['image'] = '../../' . $image_path;
+            }
+        } else {
+            $article['image'] = '/assets/images/placeholder.jpg';
+        }
+    }
     echo json_encode(['articles' => $articles]);
     exit;
 }
@@ -165,9 +176,51 @@ if ($is_ajax) {
         .hidden {
             display: none;
         }
+        .navbar {
+            background-color: #1a1a1a;
+        }
+        .navbar-brand, .nav-link {
+            color: #ffffff !important;
+        }
+        .dropdown-menu {
+            background-color: #333333;
+        }
+        .dropdown-item {
+            color: #ffffff;
+        }
+        .dropdown-item:hover {
+            background-color: #ff3333;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Espace Auteur</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Catégories
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="#" data-category="">Toutes les catégories</a>
+                            <?php foreach ($categories as $categorie): ?>
+                                <a class="dropdown-item" href="#" data-category="<?php echo $categorie['id']; ?>">
+                                    <?php echo htmlspecialchars($categorie['nom']); ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <h1 class="mb-5">Bienvenue, <?php echo htmlspecialchars($auteur_info['prenom'] . ' ' . $auteur_info['nom']); ?></h1>
         
@@ -229,21 +282,7 @@ if ($is_ajax) {
         </div>
 
         <h2 class="mt-5 mb-4">Mes articles</h2>
-        <button id="toggleArticles" class="btn btn-secondary mb-4">Afficher/Masquer les articles</button>
-        
         <div id="articlesSection">
-            <div class="mb-4">
-                <label for="categoryFilter">Filtrer par catégorie:</label>
-                <select id="categoryFilter" class="form-control">
-                    <option value="">Toutes les catégories</option>
-                    <?php foreach ($categories as $categorie): ?>
-                        <option value="<?php echo $categorie['id']; ?>" <?php echo ($selected_category == $categorie['id']) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($categorie['nom']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
             <div class="mb-4">
                 <label for="searchArticle">Rechercher un article:</label>
                 <input type="text" id="searchArticle" class="form-control" placeholder="Entrez le titre de l'article">
@@ -254,7 +293,7 @@ if ($is_ajax) {
                     <p class="col-12 alert alert-info">Aucun article trouvé.</p>
                 <?php else: ?>
                     <?php foreach ($articles as $article): ?>
-                        <div class="col-md-4 mb-4 article-card" data-category="<?php echo $article['id_categorie']; ?>">
+                        <div class="col-md-4 mb-4 article-card" data-category="<?php echo $article['id']; ?>">
                             <div class="card h-100">
                                 <?php if (!empty($article['image'])): ?>
                                     <?php
@@ -270,7 +309,7 @@ if ($is_ajax) {
                                 <div class="card-body">
                                     <h5 class="card-title"><?php echo htmlspecialchars($article['titre']); ?></h5>
                                     <p class="card-text"><?php echo htmlspecialchars(substr($article['description'], 0, 100)) . '...'; ?></p>
-                                    <p class="card-text"><small class="text-muted">Catégorie: <?php echo htmlspecialchars($article['nom_categorie'] ?? 'Non catégorisé'); ?></small></p>
+                                    <p class="card-text"><small class="text-muted">Catégorie: <?php echo htmlspecialchars($article['nom'] ?? 'Non catégorisé'); ?></small></p>
                                 </div>
                                 <div class="card-footer">
                                     <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal<?php echo $article['id']; ?>">
@@ -289,7 +328,7 @@ if ($is_ajax) {
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="editModalLabel<?php echo $article['id']; ?>">Modifier l'article</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <button type="button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                     </div>
@@ -365,9 +404,6 @@ if ($is_ajax) {
         document.addEventListener('DOMContentLoaded', function() {
             const toggleFormButton = document.getElementById('toggleForm');
             const createArticleForm = document.getElementById('createArticleForm');
-            const toggleArticlesButton = document.getElementById('toggleArticles');
-            const articlesSection = document.getElementById('articlesSection');
-            const categoryFilter = document.getElementById('categoryFilter');
             const searchInput = document.getElementById('searchArticle');
             const articles = document.querySelectorAll('.article-card');
 
@@ -375,24 +411,16 @@ if ($is_ajax) {
                 createArticleForm.classList.toggle('hidden');
             });
 
-            toggleArticlesButton.addEventListener('click', function() {
-                articlesSection.classList.toggle('hidden');
-            });
-
-            categoryFilter.addEventListener('change', filterArticles);
             searchInput.addEventListener('input', filterArticles);
 
             function filterArticles() {
-                const selectedCategory = categoryFilter.value;
                 const searchTerm = searchInput.value.toLowerCase();
                 let visibleCount = 0;
 
                 $('.article-card').each(function() {
                     const article = $(this);
                     const title = article.find('.card-title').text().toLowerCase();
-                    const category = article.data('category');
-                    const shouldShow = (selectedCategory === '' || category === selectedCategory) && 
-                                       title.includes(searchTerm);
+                    const shouldShow = title.includes(searchTerm);
                     
                     if (shouldShow) {
                         article.show();
@@ -514,7 +542,7 @@ if ($is_ajax) {
                                 var articleHtml = `
                                     <div class="col-md-4 mb-4 article-card" data-category="${article.id_categorie}">
                                         <div class="card h-100">
-                                            <img src="${article.image ? article.image : '/assets/images/placeholder.jpg'}" class="card-img-top" alt="${article.titre}">
+                                            <img src="${article.image}" class="card-img-top" alt="${article.titre}">
                                             <div class="card-body">
                                                 <h5 class="card-title">${article.titre}</h5>
                                                 <p class="card-text">${article.description.substring(0, 100)}...</p>
@@ -541,6 +569,53 @@ if ($is_ajax) {
                     }
                 });
             }
+
+            // Gestion du menu de catégories
+            $('.dropdown-item').on('click', function(e) {
+                e.preventDefault();
+                const selectedCategory = $(this).data('category');
+                
+                $.ajax({
+                    url: '?id=<?php echo htmlspecialchars($auteur_id); ?>&category=' + selectedCategory,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        var articlesList = $('#articlesList');
+                        articlesList.empty();
+
+                        if (response.articles.length === 0) {
+                            articlesList.append('<p class="col-12 alert alert-info">Aucun article trouvé dans cette catégorie.</p>');
+                        } else {
+                            response.articles.forEach(function(article) {
+                                var articleHtml = `
+                                    <div class="col-md-4 mb-4 article-card" data-category="${article.id_categorie}">
+                                        <div class="card h-100">
+                                            <img src="${article.image}" class="card-img-top" alt="${article.titre}">
+                                            <div class="card-body">
+                                                <h5 class="card-title">${article.titre}</h5>
+                                                <p class="card-text">${article.description.substring(0, 100)}...</p>
+                                                <p class="card-text"><small class="text-muted">Catégorie: ${article.nom_categorie || 'Non catégorisé'}</small></p>
+                                            </div>
+                                            <div class="card-footer">
+                                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editModal${article.id}">
+                                                    Modifier
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal${article.id}">
+                                                    Supprimer
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                articlesList.append(articleHtml);
+                            });
+                        }
+                    },
+                    error: function() {
+                        $('#message-container').html('<div class="alert alert-danger">Une erreur est survenue lors du chargement des articles de cette catégorie.</div>');
+                    }
+                });
+            });
         });
     </script>
 </body>

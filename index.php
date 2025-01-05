@@ -38,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         } else if ($result['post'] === 'reader') {
             // Redirect to reader page if needed
             // header("Location: assets/pages/reader.php");
+        }else if ($result['post'] === 'admin') {
+            
+            header("Location: assets/pages/administration.php");
         }
         exit();
     } else {
