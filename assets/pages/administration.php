@@ -23,8 +23,9 @@ $database = new Database();
 $db = $database->getConnection();
 $admin = new Admin($db);
 
-// Get the active tab from GET parameter or set default to 'articles'
+// Get the active tab and sub-tab from GET parameters or set defaults
 $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'articles';
+$activeSubTab = isset($_GET['sub_tab']) ? $_GET['sub_tab'] : '';
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -164,13 +165,172 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
 ?>
 
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord administrateur</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: {
+                            DEFAULT: "hsl(var(--primary))",
+                            foreground: "hsl(var(--primary-foreground))",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(var(--secondary))",
+                            foreground: "hsl(var(--secondary-foreground))",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(var(--destructive))",
+                            foreground: "hsl(var(--destructive-foreground))",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(var(--accent))",
+                            foreground: "hsl(var(--accent-foreground))",
+                        },
+                        popover: {
+                            DEFAULT: "hsl(var(--popover))",
+                            foreground: "hsl(var(--popover-foreground))",
+                        },
+                        card: {
+                            DEFAULT: "hsl(var(--card))",
+                            foreground: "hsl(var(--card-foreground))",
+                        },
+                    },
+                    borderRadius: {
+                        lg: "var(--radius)",
+                        md: "calc(var(--radius) - 2px)",
+                        sm: "calc(var(--radius) - 4px)",
+                    },
+                },
+            },
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style type="text/css">
+        :root {
+            --primary: 346.8 77.2% 49.8%;
+            --primary-foreground: 355.7 100% 97.3%;
+            --secondary: 240 4.8% 95.9%;
+            --secondary-foreground: 240 5.9% 10%;
+            --background: 0 0% 100%;
+            --foreground: 240 10% 3.9%;
+            --muted: 240 4.8% 95.9%;
+            --muted-foreground: 240 3.8% 46.1%;
+            --accent: 240 4.8% 95.9%;
+            --accent-foreground: 240 5.9% 10%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 0 0% 98%;
+            --border: 240 5.9% 90%;
+            --input: 240 5.9% 90%;
+            --ring: 346.8 77.2% 49.8%;
+            --radius: 0.5rem;
+        }
+
+        .dark {
+            --background: 20 14.3% 4.1%;
+            --foreground: 0 0% 95%;
+            --card: 24 9.8% 10%;
+            --card-foreground: 0 0% 95%;
+            --popover: 0 0% 9%;
+            --popover-foreground: 0 0% 95%;
+            --primary: 346.8 77.2% 49.8%;
+            --primary-foreground: 355.7 100% 97.3%;
+            --secondary: 240 3.7% 15.9%;
+            --secondary-foreground: 0 0% 98%;
+            --muted: 0 0% 15%;
+            --muted-foreground: 240 5% 64.9%;
+            --accent: 12 6.5% 15.1%;
+            --accent-foreground: 0 0% 98%;
+            --destructive: 0 62.8% 30.6%;
+            --destructive-foreground: 0 85.7% 97.3%;
+            --border: 240 3.7% 15.9%;
+            --input: 240 3.7% 15.9%;
+            --ring: 346.8 77.2% 49.8%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar {
+            background-color: hsl(var(--card));
+            color: hsl(var(--card-foreground));
+        }
+
+        .main-content {
+            background-color: hsl(var(--background));
+        }
+
+        .nav-link {
+            color: hsl(var(--muted-foreground));
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: hsl(var(--foreground));
+            background-color: hsl(var(--accent));
+        }
+
+        .btn-primary {
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+
+        .btn-secondary {
+            background-color: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+        }
+
+        .table {
+            color: hsl(var(--foreground));
+        }
+
+        .table thead th {
+            background-color: hsl(var(--muted));
+            color: hsl(var(--muted-foreground));
+        }
+
+        .modal-content {
+            background-color: black;
+            color: white;
+        }
+
+        .modal-content label {
+            color: red;
+        }
+
+        .article-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+        }
+
+        .image-modal {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .close {
+            color: hsl(var(--muted-foreground));
+        }
+    </style>
     <style>
         .article-image {
             width: 100px;
@@ -181,21 +341,11 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
             padding: 2px;
             cursor: pointer;
         }
-        
+
         .article-image:not([src]) {
             display: none;
         }
-        
-        td {
-            vertical-align: middle !important;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 5px;
-        }
 
-        /* Styles pour le modal d'image */
         .image-modal {
             display: none;
             position: fixed;
@@ -226,354 +376,377 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
             font-weight: bold;
             cursor: pointer;
         }
-
-        /* Styles pour le menu latéral */
-        .sidebar {
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            padding: 20px;
-            background-color: #f8f9fa;
-            overflow-y: auto;
-        }
-
-        .main-content {
-            margin-left: 300px; /* Ajustez cette valeur en fonction de la largeur de votre sidebar */
-        }
-
-        .chart-container {
-            margin-bottom: 20px;
-        }
     </style>
 </head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky">
-                    <h3 class="mb-3">Statistiques</h3>
-                    <div class="chart-container">
-                        <canvas id="articleStatusChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="userBlockChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="articleCategoryChart"></canvas>
-                    </div>
-                </div>
+<body<body class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 sidebar overflow-y-auto">
+        <div class="p-4">
+            <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
+            <nav>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="#articles" class="nav-link block p-2 rounded-lg <?php echo $activeTab === 'articles' ? 'active' : ''; ?>" onclick="showTab('articles')">Articles</a>
+                    </li>
+                    <li>
+                        <a href="#users" class="nav-link block p-2 rounded-lg <?php echo $activeTab === 'users' ? 'active' : ''; ?>" onclick="showTab('users')">Utilisateurs</a>
+                        <?php if ($activeTab === 'users'): ?>
+                        <ul class="ml-4 mt-2 space-y-1">
+                            <li><a href="?tab=users&sub_tab=auteur" class="nav-link block p-1 rounded-lg <?php echo $activeSubTab === 'auteur' ? 'active' : ''; ?>">Auteurs</a></li>
+                            <li><a href="?tab=users&sub_tab=reader" class="nav-link block p-1 rounded-lg <?php echo $activeSubTab === 'reader' ? 'active' : ''; ?>">Lecteurs</a></li>
+                            <li><a href="?tab=users&sub_tab=blocked" class="nav-link block p-1 rounded-lg <?php echo $activeSubTab === 'blocked' ? 'active' : ''; ?>">Bloqués</a></li>
+                        </ul>
+                        <?php endif; ?>
+                    </li>
+                    <li>
+                        <a href="#categories" class="nav-link block p-2 rounded-lg <?php echo $activeTab === 'categories' ? 'active' : ''; ?>" onclick="showTab('categories')">Catégories</a>
+                    </li>
+                </ul>
             </nav>
+        </div>
+        <div class="p-4">
+            <h2 class="text-xl font-semibold mb-4">Statistiques</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-sm font-medium mb-2">Statut des articles</h3>
+                    <canvas id="articleStatusChart"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium mb-2">Statut des utilisateurs</h3>
+                    <canvas id="userBlockChart"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium mb-2">Articles par catégorie</h3>
+                    <canvas id="articleCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </aside>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <div class="container mt-5">
-                    <h1 class="mb-4">Tableau de bord administrateur</h1>
+    <!-- Main content -->
+    <main class="flex-1 overflow-x-hidden overflow-y-auto main-content">
+        <div class="container mx-auto px-6 py-8">
+            <h1 class="text-3xl font-semibold mb-6">Tableau de bord administrateur</h1>
 
-                    <?php if (isset($message)): ?>
-                        <div id="successMessage" class="alert alert-success" role="alert">
-                            <?php echo $message; ?>
+            <?php if (isset($message)): ?>
+                <div id="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span class="block sm:inline"><?php echo $message; ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($error)): ?>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span class="block sm:inline"><?php echo $error; ?></span>
+                </div>
+            <?php endif; ?>
+
+            <div class="bg-card text-card-foreground rounded-lg shadow-md">
+                <div class="border-b border-border">
+                    <nav class="-mb-px flex">
+                        <a href="#articles" class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 nav-link <?php echo $activeTab === 'articles' ? 'active' : ''; ?>" onclick="showTab('articles')">
+                            Articles
+                        </a>
+                        <a href="#users" class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 nav-link <?php echo $activeTab === 'users' ? 'active' : ''; ?>" onclick="showTab('users')">
+                            Utilisateurs
+                        </a>
+                        <a href="#categories" class="w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 nav-link <?php echo $activeTab === 'categories' ? 'active' : ''; ?>" onclick="showTab('categories')">
+                            Catégories
+                        </a>
+                    </nav>
+                </div>
+
+                <div class="p-6">
+                    <!-- Articles Tab Content -->
+                    <div id="articles" class="tab-content <?php echo $activeTab === 'articles' ? '' : 'hidden'; ?>">
+                        <h2 class="text-2xl font-semibold mb-4">Gestion des articles</h2>
+                        <div class="mb-4 space-x-2">
+                            <a href="?tab=articles&article_status=confirme" class="inline-block bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $articleStatus === 'confirme' ? 'active' : ''; ?>">Articles confirmés</a>
+                            <a href="?tab=articles&article_status=nom confirme" class="inline-block bg-secondary text-secondary-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $articleStatus === 'nom confirme' ? 'active' : ''; ?>">Articles non confirmés</a>
+                            <a href="?tab=articles" class="inline-block bg-accent text-accent-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $articleStatus === null ? 'active' : ''; ?>">Tous les articles</a>
                         </div>
-                    <?php endif; ?>
-
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger" role="alert">
-                            <?php echo $error; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <ul class="nav nav-tabs" id="myTab" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $activeTab === 'articles' ? 'active' : ''; ?>" id="articles-tab" data-toggle="tab" href="#articles" role="tab">Articles</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $activeTab === 'users' ? 'active' : ''; ?>" id="users-tab" data-toggle="tab" href="#users" role="tab">Utilisateurs</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $activeTab === 'categories' ? 'active' : ''; ?>" id="categories-tab" data-toggle="tab" href="#categories" role="tab">Catégories</a>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content mt-3" id="myTabContent">
-                        <div class="tab-pane fade <?php echo $activeTab === 'articles' ? 'show active' : ''; ?>" id="articles" role="tabpanel">
-                            <h2>Gestion des articles</h2>
-                            <div class="mb-3">
-                                <a href="?tab=articles&article_status=confirme" class="btn btn-outline-primary">Articles confirmés</a>
-                                <a href="?tab=articles&article_status=nom confirme" class="btn btn-outline-primary">Articles non confirmés</a>
-                                <a href="?tab=articles" class="btn btn-outline-secondary">Tous les articles</a>
-                            </div>
-                            <?php if (empty($articles)): ?>
-                                <p>Aucun article trouvé.</p>
-                            <?php else: ?>
-                                <table class="table">
-                                    <thead>
+                        <?php if (empty($articles)): ?>
+                            <p class="text-muted-foreground">Aucun article trouvé.</p>
+                        <?php else: ?>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left table">
+                                    <thead class="text-xs uppercase bg-muted">
                                         <tr>
-                                            <th>Image</th>
-                                            <th>Titre</th>
-                                            <th>Description</th>
-                                            <th>Auteur</th>
-                                            <th>Catégorie</th>
-                                            <th>Statut</th>
-                                            <th>Actions</th>
+                                            <th scope="col" class="px-6 py-3">Image</th>
+                                            <th scope="col" class="px-6 py-3">Titre</th>
+                                            <th scope="col" class="px-6 py-3">Description</th>
+                                            <th scope="col" class="px-6 py-3">Auteur</th>
+                                            <th scope="col" class="px-6 py-3">Catégorie</th>
+                                            <th scope="col" class="px-6 py-3">Statut</th>
+                                            <th scope="col" class="px-6 py-3">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($articles as $article): ?>
-                                        <tr>
-                                            <td>
+                                        <tr class="border-b border-border">
+                                            <td class="px-6 py-4">
                                                 <?php
                                                 if (!empty($article['image'])) {
                                                     if ($article['image_type'] === 'path') {
-                                                        // Construire les chemins
                                                         $fullImagePath = $baseImagePath . basename($article['image']);
                                                         $webPath = $webImagePath . basename($article['image']);
-                                                        
-                                                        error_log('Checking image at: ' . $fullImagePath);
-                                                        error_log('Web path will be: ' . $webPath);
-                                                        
+
                                                         if (file_exists($fullImagePath)) {
                                                             echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(\'' . htmlspecialchars($webPath) . '\')">';
-                                                            error_log('Image found and displayed: ' . $webPath);
                                                         } else {
                                                             echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
-                                                            error_log('Image file not found: ' . $fullImagePath);
                                                         }
                                                     } else if ($article['image_type'] === 'blob') {
                                                         echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
-                                                        error_log('Displaying BLOB image for article ID: ' . $article['id']);
                                                     }
                                                 } else {
                                                     echo 'Pas d\'image';
-                                                    error_log('No image for article ID: ' . $article['id']);
                                                 }
                                                 ?>
                                             </td>
-                                            <td><?php echo htmlspecialchars($article['titre'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($article['description'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars(($article['prenom'] ?? '') . ' ' . ($article['nom'] ?? '')); ?></td>
-                                            <td><?php echo htmlspecialchars($article['nom_categorie'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($article['statut'] ?? ''); ?></td>
-                                            <td class="action-buttons">
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($article['titre'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($article['description'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars(($article['prenom'] ?? '') . ' ' . ($article['nom'] ?? '')); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($article['nom_categorie'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($article['statut'] ?? ''); ?></td>
+                                            <td class="px-6 py-4">
                                                 <?php if ($article['statut'] == 'nom confirme'): ?>
-                                                    <form method="POST">
+                                                    <form method="POST" class="inline-block">
                                                         <input type="hidden" name="action" value="confirmer_article">
                                                         <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                                        <button type="submit" class="btn btn-success btn-sm">Confirmer</button>
+                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs">Confirmer</button>
                                                     </form>
                                                 <?php else: ?>
-                                                    <form method="POST">
+                                                    <form method="POST" class="inline-block">
                                                         <input type="hidden" name="action" value="annuler_confirmation_article">
                                                         <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                                        <button type="submit" class="btn btn-warning btn-sm">Annuler confirmation</button>
+                                                        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded text-xs">Annuler confirmation</button>
                                                     </form>
                                                 <?php endif; ?>
-                                                <form method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article ?');">
+                                                <form method="POST" class="inline-block" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article ?');">
                                                     <input type="hidden" name="action" value="supprimer_article">
                                                     <input type="hidden" name="article_id" value="<?php echo $article['id']; ?>">
-                                                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs">Supprimer</button>
                                                 </form>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            <?php endif; ?>
-                        </div>
-
-                        <!-- Users Tab Content -->
-                        <div class="tab-pane fade <?php echo $activeTab === 'users' ? 'show active' : ''; ?>" id="users" role="tabpanel">
-                            <h2>Gestion des utilisateurs</h2>
-                            <div class="mb-3">
-                                <a href="?tab=users&user_type=auteur" class="btn btn-outline-primary">Auteurs</a>
-                                <a href="?tab=users&user_type=reader" class="btn btn-outline-primary">Lecteurs</a>
-                                <a href="?tab=users&user_status=blocked" class="btn btn-outline-warning">Utilisateurs bloqués</a>
-                                <a href="?tab=users" class="btn btn-outline-secondary">Tous les utilisateurs</a>
                             </div>
-                            <?php if (empty($users)): ?>
-                                <p>Aucun utilisateur trouvé.</p>
-                            <?php else: ?>
-                                <table class="table">
-                                    <thead>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Users Tab Content -->
+                    <div id="users" class="tab-content <?php echo $activeTab === 'users' ? '' : 'hidden'; ?>">
+                        <h2 class="text-2xl font-semibold mb-4">Gestion des utilisateurs</h2>
+                        <div class="mb-4 space-x-2">
+                            <a href="?tab=users&user_type=auteur" class="inline-block bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $userType === 'auteur' ? 'active' : ''; ?>">Auteurs</a>
+                            <a href="?tab=users&user_type=reader" class="inline-block bg-secondary text-secondary-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $userType === 'reader' ? 'active' : ''; ?>">Lecteurs</a>
+                            <a href="?tab=users&user_status=blocked" class="inline-block bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $userStatus === 'blocked' ? 'active' : ''; ?>">Utilisateurs bloqués</a>
+                            <a href="?tab=users" class="inline-block bg-accent text-accent-foreground px-4 py-2 rounded-md text-sm font-medium <?php echo $userType === null && $userStatus === 'active' ? 'active' : ''; ?>">Tous les utilisateurs</a>
+                        </div>
+                        <?php if (empty($users)): ?>
+                            <p class="text-muted-foreground">Aucun utilisateur trouvé.</p>
+                        <?php else: ?>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left table">
+                                    <thead class="text-xs uppercase bg-muted">
                                         <tr>
-                                            <th>Nom</th>
-                                            <th>Email</th>
-                                            <th>Type</th>
+                                            <th scope="col" class="px-6 py-3">Nom</th>
+                                            <th scope="col" class="px-6 py-3">Email</th>
+                                            <th scope="col" class="px-6 py-3">Type</th>
                                             <?php if ($userStatus === 'blocked'): ?>
-                                                <th>Motif du blocage</th>
+                                                <th scope="col" class="px-6 py-3">Motif du blocage</th>
                                             <?php endif; ?>
-                                            <th>Actions</th>
+                                            <th scope="col" class="px-6 py-3">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($users as $user): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($user['nom'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($user['post'] ?? ''); ?></td>
+                                        <tr class="border-b border-border">
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($user['nom'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($user['post'] ?? ''); ?></td>
                                             <?php if ($userStatus === 'blocked'): ?>
-                                                <td><?php echo htmlspecialchars($user['motif_supprime'] ?? ''); ?></td>
+                                                <td class="px-6 py-4"><?php echo htmlspecialchars($user['motif_supprime'] ?? ''); ?></td>
                                             <?php endif; ?>
-                                            <td>
+                                            <td class="px-6 py-4">
                                                 <?php if ($userStatus === 'blocked'): ?>
-                                                    <form method="POST" class="d-inline">
+                                                    <form method="POST" class="inline-block">
                                                         <input type="hidden" name="action" value="debloquer_utilisateur">
                                                         <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                        <button type="submit" class="btn btn-success btn-sm">Débloquer</button>
+                                                        <button type="submit" class="bg-green-500hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs">Débloquer</button>
                                                     </form>
                                                 <?php else: ?>
-                                                    <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#blockUserModal<?php echo $user['id']; ?>">
+                                                    <button type="button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs" onclick="openBlockUserModal(<?php echo $user['id']; ?>)">
                                                         Bloquer
                                                     </button>
-
-                                                    <!-- Modal pour bloquer l'utilisateur -->
-                                                    <div class="modal fade" id="blockUserModal<?php echo $user['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="blockUserModalLabel<?php echo $user['id']; ?>" aria-hidden="true">
-                                                        <div class="modal-dialog" role="document">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header">
-                                                                    <h5 class="modal-title" id="blockUserModalLabel<?php echo $user['id']; ?>">Bloquer l'utilisateur</h5>
-                                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                                        <span aria-hidden="true">&times;</span>
-                                                                    </button>
-                                                                </div>
-                                                                <form method="POST">
-                                                                    <div class="modal-body">
-                                                                        <input type="hidden" name="action" value="bloquer_utilisateur">
-                                                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                                        <div class="form-group">
-                                                                            <label for="motif">Motif du blocage:</label>
-                                                                            <textarea class="form-control" id="motif" name="motif" required></textarea>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="modal-footer">
-                                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                                        <button type="submit" class="btn btn-danger">Bloquer</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            <?php endif; ?>
-                        </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
 
-                        <!-- Categories Tab Content -->
-                        <div class="tab-pane fade <?php echo $activeTab === 'categories' ? 'show active' : ''; ?>" id="categories" role="tabpanel">
-                            <h2>Gestion des catégories</h2>
-                            <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#addCategoryModal">
-                                Ajouter une catégorie
-                            </button>
+                    <!-- Categories Tab Content -->
+                    <div id="categories" class="tab-content <?php echo $activeTab === 'categories' ? '' : 'hidden'; ?>">
+                        <h2 class="text-2xl font-semibold mb-4">Gestion des catégories</h2>
+                        <button type="button" class="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium mb-4" onclick="openAddCategoryModal()">
+                            Ajouter une catégorie
+                        </button>
 
-                            <?php if (empty($categories)): ?>
-                                <p>Aucune catégorie trouvée.</p>
-                            <?php else: ?>
-                                <table class="table">
-                                    <thead>
+                        <?php if (empty($categories)): ?>
+                            <p class="text-muted-foreground">Aucune catégorie trouvée.</p>
+                        <?php else: ?>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left table">
+                                    <thead class="text-xs uppercase bg-muted">
                                         <tr>
-                                            <th>Nom</th>
-                                            <th>Description</th>
-                                            <th>Actions</th>
+                                            <th scope="col" class="px-6 py-3">Nom</th>
+                                            <th scope="col" class="px-6 py-3">Description</th>
+                                            <th scope="col" class="px-6 py-3">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($categories as $category): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($category['nom'] ?? ''); ?></td>
-                                            <td><?php echo htmlspecialchars($category['description'] ?? ''); ?></td>
-                                            <td>
-                                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#editCategoryModal<?php echo $category['id']; ?>">
+                                        <tr class="border-b border-border">
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($category['nom'] ?? ''); ?></td>
+                                            <td class="px-6 py-4"><?php echo htmlspecialchars($category['description'] ?? ''); ?></td>
+                                            <td class="px-6 py-4">
+                                                <button type="button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs" onclick="openEditCategoryModal(<?php echo $category['id']; ?>, '<?php echo addslashes($category['nom']); ?>', '<?php echo addslashes($category['description']); ?>')">
                                                     Modifier
                                                 </button>
-                                                <form method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
+                                                <form method="POST" class="inline-block" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?');">
                                                     <input type="hidden" name="action" value="supprimer_categorie">
                                                     <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
-                                                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs">Supprimer</button>
                                                 </form>
                                             </td>
                                         </tr>
-
-                                        <!-- Modal pour modifier la catégorie -->
-                                        <div class="modal fade" id="editCategoryModal<?php echo $category['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="editCategoryModalLabel<?php echo $category['id']; ?>" aria-hidden="true">
-                                            <div class="modal-dialog" role="document">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="editCategoryModalLabel<?php echo $category['id']; ?>">Modifier la catégorie</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                            <span aria-hidden="true">&times;</span>
-                                                        </button>
-                                                    </div>
-                                                    <form method="POST">
-                                                        <div class="modal-body">
-                                                            <input type="hidden" name="action" value="modifier_categorie">
-                                                            <input type="hidden" name="id" value="<?php echo $category['id']; ?>">
-                                                            <div class="form-group">
-                                                                <label for="nom">Nom de la catégorie:</label>
-                                                                <input type="text" class="form-control" id="nom" name="nom" value="<?php echo htmlspecialchars($category['nom']); ?>" required>
-                                                            </div>
-                                                            <div class="form-group">
-                                                                <label for="description">Description:</label>
-                                                                <textarea class="form-control" id="description" name="description" required><?php echo htmlspecialchars($category['description']); ?></textarea>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                            <button type="submit" class="btn btn-primary">Modifier</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            <?php endif; ?>
-
-                            <!-- Modal pour ajouter une catégorie -->
-                            <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
-                                <div class="modal-dialog" role="document">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="addCategoryModalLabel">Ajouter une catégorie</h5>
-                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                <span aria-hidden="true">&times;</span>
-                                            </button>
-                                        </div>
-                                        <form method="POST">
-                                            <div class="modal-body">
-                                                <input type="hidden" name="action" value="ajouter_categorie">
-                                                <div class="form-group">
-                                                    <label for="nom">Nom de la catégorie:</label>
-                                                    <input type="text" class="form-control" id="nom" name="nom" required>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="description">Description:</label>
-                                                    <textarea class="form-control" id="description" name="description" required></textarea>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                <button type="submit" class="btn btn-primary">Ajouter</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Container pour l'image zoomée -->
+    <!-- Modal pour l'image zoomée -->
     <div id="imageModal" class="image-modal">
         <span class="close">&times;</span>
         <img class="modal-content" id="zoomedImage">
+    </div>
+
+    <!-- Modal pour bloquer un utilisateur -->
+    <div id="blockUserModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+                        Bloquer l'utilisateur
+                    </h3>
+                    <div class="mt-2">
+                        <form id="blockUserForm" method="POST">
+                            <input type="hidden" name="action" value="bloquer_utilisateur">
+                            <input type="hidden" name="user_id" id="blockUserId">
+                            <div class="mb-4">
+                                <label for="motif" class="block text-sm font-medium text-red-500">Motif du blocage:</label>
+                                <textarea id="motif" name="motif" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" form="blockUserForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Bloquer
+                    </button>
+                    <button type="button" onclick="closeBlockUserModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour ajouter une catégorie -->
+    <div id="addCategoryModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+                        Ajouter une catégorie
+                    </h3>
+                    <div class="mt-2">
+                        <form id="addCategoryForm" method="POST">
+                            <input type="hidden" name="action" value="ajouter_categorie">
+                            <div class="mb-4">
+                                <label for="nom" class="block text-sm font-medium text-red-500">Nom de la catégorie:</label>
+                                <input type="text" id="nom" name="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="description" class="block text-sm font-medium text-red-500">Description:</label>
+                                <textarea id="description" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" form="addCategoryForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Ajouter
+                    </button>
+                    <button type="button" onclick="closeAddCategoryModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour modifier une catégorie -->
+    <div id="editCategoryModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-black rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-black px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">
+                        Modifier la catégorie
+                    </h3>
+                    <div class="mt-2">
+                        <form id="editCategoryForm" method="POST">
+                            <input type="hidden" name="action" value="modifier_categorie">
+                            <input type="hidden" name="id" id="editCategoryId">
+                            <div class="mb-4">
+                                <label for="editNom" class="block text-sm font-medium text-red-500">Nom de la catégorie:</label>
+                                <input type="text" id="editNom" name="nom" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="editDescription" class="block text-sm font-medium text-red-500">Description:</label>
+                                <textarea id="editDescription" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-black text-white" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="bg-black px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" form="editCategoryForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Modifier
+                    </button>
+                    <button type="button" onclick="closeEditCategoryModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -582,7 +755,7 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
     <script>
         // Ensure the correct tab is active after form submission
         $(document).ready(function() {
-            $('#myTab a[href="#<?php echo $activeTab; ?>"]').tab('show');
+            showTab('<?php echo $activeTab; ?>');
         });
 
         // Fonction pour masquer le message de succès
@@ -600,18 +773,22 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
         }
 
         // Appeler la fonction au chargement de la page
-        window.onload = hideSuccessMessage;
+        window.onload = function() {
+            hideSuccessMessage();
+            showTab('<?php echo $activeTab; ?>');
+            createCharts();
+        };
 
         // Fonctions pour l'image zoomée
         function openImageModal(src) {
             var modal = document.getElementById("imageModal");
             var modalImg = document.getElementById("zoomedImage");
-            
+
             // Assurez-vous que l'image est chargée avant d'afficher le modal
             modalImg.onload = function() {
                 modal.style.display = "flex";
             };
-            
+
             // Définir la source de l'image
             if (src.startsWith('data:image')) {
                 modalImg.src = src; // Pour les images BLOB
@@ -640,6 +817,53 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
             console.error("Erreur de chargement de l'image");
             closeImageModal();
         };
+
+        // Fonctions pour le modal de blocage d'utilisateur
+        function openBlockUserModal(userId) {
+            document.getElementById('blockUserId').value = userId;
+            document.getElementById('blockUserModal').classList.remove('hidden');
+        }
+
+        function closeBlockUserModal() {
+            document.getElementById('blockUserModal').classList.add('hidden');
+        }
+
+        // Fonctions pour le modal d'ajout de catégorie
+        function openAddCategoryModal() {
+            document.getElementById('addCategoryModal').classList.remove('hidden');
+        }
+
+        function closeAddCategoryModal() {
+            document.getElementById('addCategoryModal').classList.add('hidden');
+        }
+
+        // Fonctions pour le modal de modification de catégorie
+        function openEditCategoryModal(id, nom, description) {
+            document.getElementById('editCategoryId').value = id;
+            document.getElementById('editNom').value = nom;
+            document.getElementById('editDescription').value = description;
+            document.getElementById('editCategoryModal').classList.remove('hidden');
+        }
+
+        function closeEditCategoryModal() {
+            document.getElementById('editCategoryModal').classList.add('hidden');
+        }
+
+        // Fonction pour afficher l'onglet sélectionné
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`.nav-link[href="#${tabId}"]`).classList.add('active');
+
+            // Mettre à jour l'URL avec le nouvel onglet actif
+            history.pushState(null, '', `?tab=${tabId}`);
+        }
 
         // Création des graphiques
         function createCharts() {
@@ -711,9 +935,6 @@ $articleCategoryStats = $admin->getArticleCountByCategory();
                 }
             });
         }
-
-        // Appeler la fonction pour créer les graphiques au chargement de la page
-        document.addEventListener('DOMContentLoaded', createCharts);
     </script>
 </body>
 </html>
