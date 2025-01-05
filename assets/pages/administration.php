@@ -172,6 +172,7 @@ if ($categoriesResult['success']) {
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 2px;
+            cursor: pointer;
         }
         
         .article-image:not([src]) {
@@ -185,6 +186,45 @@ if ($categoriesResult['success']) {
         .action-buttons {
             display: flex;
             gap: 5px;
+        }
+
+        /* Styles pour le modal d'image */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            max-height: 80%;
+            object-fit: contain;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -254,14 +294,14 @@ if ($categoriesResult['success']) {
                                             error_log('Web path will be: ' . $webPath);
                                             
                                             if (file_exists($fullImagePath)) {
-                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image">';
+                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
                                                 error_log('Image found and displayed: ' . $webPath);
                                             } else {
                                                 echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
                                                 error_log('Image file not found: ' . $fullImagePath);
                                             }
                                         } else if ($article['image_type'] === 'blob') {
-                                            echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image">';
+                                            echo '<img src="data:image/jpeg;base64,' . base64_encode($article['image']) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
                                             error_log('Displaying BLOB image for article ID: ' . $article['id']);
                                         }
                                     } else {
@@ -488,6 +528,12 @@ if ($categoriesResult['success']) {
         </div>
     </div>
 
+    <!-- Modal pour l'image zoomée -->
+    <div id="imageModal" class="image-modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="zoomedImage">
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -513,6 +559,19 @@ if ($categoriesResult['success']) {
 
         // Appeler la fonction au chargement de la page
         window.onload = hideSuccessMessage;
+
+        // Fonctions pour le modal d'image
+        function openImageModal(src) {
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("zoomedImage");
+            modal.style.display = "block";
+            modalImg.src = src;
+        }
+
+        var span = document.getElementsByClassName("close")[0];
+        span.onclick = function() { 
+            document.getElementById("imageModal").style.display = "none";
+        }
     </script>
 </body>
 </html>
