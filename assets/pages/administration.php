@@ -197,16 +197,17 @@ if ($categoriesResult['success']) {
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            display: flex;
+            background-color: rgba(0,0,0,0.9);
             justify-content: center;
             align-items: center;
         }
 
         .modal-content {
             max-width: 90%;
-            max-height: 90%;
+            max-height: 90vh;
             object-fit: contain;
+            display: block;
+            margin: auto;
         }
 
         .close {
@@ -286,7 +287,7 @@ if ($categoriesResult['success']) {
                                             error_log('Web path will be: ' . $webPath);
                                             
                                             if (file_exists($fullImagePath)) {
-                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(this.src)">';
+                                                echo '<img src="' . htmlspecialchars($webPath) . '" alt="Image de l\'article" class="article-image" onclick="openImageModal(\'' . htmlspecialchars($webPath) . '\')">'; // Modification 4: Appel de openImageModal avec la source correctement échappée
                                                 error_log('Image found and displayed: ' . $webPath);
                                             } else {
                                                 echo 'Image non trouvée: ' . htmlspecialchars(basename($article['image']));
@@ -556,11 +557,21 @@ if ($categoriesResult['success']) {
         function openImageModal(src) {
             var modal = document.getElementById("imageModal");
             var modalImg = document.getElementById("zoomedImage");
-            modal.style.display = "flex";
-            modalImg.src = src;
+            
+            // Assurez-vous que l'image est chargée avant d'afficher le modal
+            modalImg.onload = function() {
+                modal.style.display = "flex";
+            };
+            
+            // Définir la source de l'image
+            if (src.startsWith('data:image')) {
+                modalImg.src = src; // Pour les images BLOB
+            } else {
+                modalImg.src = src; // Pour les images fichiers, utiliser la source directe
+            }
         }
 
-        // Fermer l'image zoomée
+        // Modification 3: Fonction closeImageModal et gestionnaires d'événements
         function closeImageModal() {
             document.getElementById("imageModal").style.display = "none";
         }
@@ -575,6 +586,12 @@ if ($categoriesResult['success']) {
                 closeImageModal();
             }
         }
+        document.getElementById("imageModal").style.display = "none"; // Added to hide modal initially
+
+        document.getElementById("zoomedImage").onerror = function() {
+            console.error("Erreur de chargement de l'image");
+            closeImageModal();
+        };
     </script>
 </body>
 </html>

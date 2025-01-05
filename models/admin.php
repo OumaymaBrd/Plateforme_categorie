@@ -256,7 +256,7 @@ class Admin {
 
     public function debloquerProfil($userId) {
         try {
-            $query = "UPDATE user_ SET supprime = 0, motif_supprime = NULL WHERE id = :id";
+            $query = "UPDATE user_ SET supprime = 0,  motif_supprime = 'Avertissement' WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id', $userId);
             
