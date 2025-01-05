@@ -3,9 +3,9 @@ require_once __DIR__ . '/../database/bdd.php';
 
 class User {
     protected $conn;
-    protected $table_name = "user_";  // Updated table name
+    protected $table_name = "user_";  
 
-    public $id;  // Updated from id_user to id
+    public $id;  
     public $prenom;
     public $nom;
     public $email;
@@ -23,7 +23,7 @@ class User {
         try {
             $query = "SELECT * FROM " . $this->table_name . " 
                       WHERE matricule = :matricule 
-                      AND supprime = 0";  // Added supprime check
+                      AND supprime = 0";  
             
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(":matricule", $matricule);
