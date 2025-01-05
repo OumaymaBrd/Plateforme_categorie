@@ -197,16 +197,15 @@ if ($categoriesResult['success']) {
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .modal-content {
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 700px;
-            max-height: 80%;
+            max-width: 90%;
+            max-height: 90%;
             object-fit: contain;
         }
 
@@ -217,13 +216,6 @@ if ($categoriesResult['success']) {
             color: #f1f1f1;
             font-size: 40px;
             font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
             cursor: pointer;
         }
     </style>
@@ -528,7 +520,7 @@ if ($categoriesResult['success']) {
         </div>
     </div>
 
-    <!-- Modal pour l'image zoomée -->
+    <!-- Container pour l'image zoomée -->
     <div id="imageModal" class="image-modal">
         <span class="close">&times;</span>
         <img class="modal-content" id="zoomedImage">
@@ -560,17 +552,28 @@ if ($categoriesResult['success']) {
         // Appeler la fonction au chargement de la page
         window.onload = hideSuccessMessage;
 
-        // Fonctions pour le modal d'image
+        // Fonctions pour l'image zoomée
         function openImageModal(src) {
             var modal = document.getElementById("imageModal");
             var modalImg = document.getElementById("zoomedImage");
-            modal.style.display = "block";
+            modal.style.display = "flex";
             modalImg.src = src;
         }
 
-        var span = document.getElementsByClassName("close")[0];
-        span.onclick = function() { 
+        // Fermer l'image zoomée
+        function closeImageModal() {
             document.getElementById("imageModal").style.display = "none";
+        }
+
+        // Ajouter l'événement de clic à la croix de fermeture
+        document.querySelector('.close').addEventListener('click', closeImageModal);
+
+        // Fermer l'image zoomée en cliquant en dehors de l'image
+        window.onclick = function(event) {
+            var modal = document.getElementById("imageModal");
+            if (event.target == modal) {
+                closeImageModal();
+            }
         }
     </script>
 </body>
