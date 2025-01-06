@@ -37,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             header("Location: assets/pages/auteur.php?id=" . $result['id_user']);
         } else if ($result['post'] === 'reader') {
             // Redirect to reader page if needed
-            header("Location: assets/pages/reader.php");
+            // header("Location: assets/pages/reader.php");
+            header("Location: assets/pages/reader.php?id=" . $result['id_user']);
         }else if ($result['post'] === 'admin') {
             
             header("Location: assets/pages/administration.php");
