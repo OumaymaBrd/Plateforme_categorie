@@ -1,6 +1,6 @@
 {
     "require": {
-        "tecnickcom/tcpdf": "^6.4"
+        "tecnickcom/tcpdf": "^6.8",
+        "other-package/name": "^1.0"
     }
 }
-

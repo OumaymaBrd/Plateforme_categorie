@@ -1,7 +1,10 @@
 <?php
+ob_start();
 session_start();
 require_once __DIR__ . '/../../models/reader.php';
 require_once __DIR__ . '/../../database/bdd.php';
+require_once __DIR__ . '/../../vendor/autoload.php'; // Pour TCPDF
+use TCPDF;
 
 // Configuration des erreurs
 ini_set('display_errors', 1);
@@ -122,8 +125,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Gestion du téléchargement PDF
+if (isset($_GET['download_pdf']) && isset($_GET['article_id'])) {
+    $article_id = (int)$_GET['article_id'];
+    $article_to_download = $reader->getArticleById($article_id);
+    if ($article_to_download) {
+        // Clear any output that might have been sent
+        ob_clean();
+
+        // Create new PDF document
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document information
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Votre Site Web');
+        $pdf->SetTitle($article_to_download['titre']);
+        $pdf->SetSubject('Article PDF');
+        $pdf->SetKeywords('Article, PDF, Download');
+
+        // Remove default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Set margins
+        $pdf->SetMargins(15, 15, 15);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Set font
+        $pdf->SetFont('dejavusans', '', 12);
+
+        // Prepare HTML content
+        $html = '<h1 style="text-align: center;">' . $article_to_download['titre'] . '</h1>';
+        
+        // Add image if exists
+        if ($article_to_download['image_type'] === 'blob' && !empty($article_to_download['image'])) {
+            $imageData = base64_encode($article_to_download['image']);
+            $html .= '<div style="text-align: center;"><img src="@' . preg_replace('#^data:image/[^;]+;base64,#', '', $imageData) . '" style="max-width: 400px;"></div>';
+        } elseif ($article_to_download['image_type'] === 'path' && !empty($article_to_download['image'])) {
+            $imagePath = __DIR__ . '/../../assets/images/' . $article_to_download['image'];
+            if (file_exists($imagePath)) {
+                $imageData = base64_encode(file_get_contents($imagePath));
+                $html .= '<div style="text-align: center;"><img src="@' . $imageData . '" style="max-width: 400px;"></div>';
+            }
+        }
+
+        // Add article metadata
+        $html .= '<div style="margin: 20px 0; padding: 10px; background-color: #f5f5f5;">';
+        $html .= '<p><strong>Auteur:</strong> ' . ($article_to_download['prenom'] ?? '') . ' ' . ($article_to_download['nom'] ?? '') . '</p>';
+        $html .= '<p><strong>Catégorie:</strong> ' . ($article_to_download['nom_categorie'] ?? '') . '</p>';
+        $html .= '<p><strong>Date:</strong> ' . (isset($article_to_download['date_creation']) ? date('d/m/Y', strtotime($article_to_download['date_creation'])) : 'Date non disponible') . '</p>';
+        $html .= '</div>';
+
+        // Add description and content
+        $html .= '<div style="margin-bottom: 20px;"><strong>Description:</strong><br>' . $article_to_download['description'] . '</div>';
+        $html .= '<div style="text-align: justify;">' . nl2br($article_to_download['contenu']) . '</div>';
+
+        // Write HTML content
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Output PDF
+        $pdf->Output($article_to_download['titre'] . '.pdf', 'D');
+        exit;
+    }
+}
+
 // Récupération des favoris
 $favorites = $reader->getFavorites($id);
+
+// Récupération des informations de l'utilisateur pour le profil
+$user_profile = $reader->getUserProfile($id);
 
 // Fonction utilitaire pour gérer les valeurs null dans htmlspecialchars
 function e($value) {
@@ -133,8 +205,75 @@ function e($value) {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-?>
+// Gestion de la mise à jour du profil
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    $nom = trim($_POST['nom']);
+    $prenom = trim($_POST['prenom']);
+    $email = trim($_POST['email']);
+    $tel = trim($_POST['tel']);
+    
+    // Gestion de l'upload d'image
+    
+    $image = $user_profile['image']; // Garder l'image existante par défaut
+    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+        $allowed = array("jpg" => "image/jpg", "jpeg" => "image/jpeg", "gif" => "image/gif", "png" => "image/png");
+        $filename = $_FILES["image"]["name"];
+        $filetype = $_FILES["image"]["type"];
+        $filesize = $_FILES["image"]["size"];
+    
+        // Verify file extension
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        if (!array_key_exists($ext, $allowed)) {
+            $error_message = "Erreur : Veuillez sélectionner un format de fichier valide.";
+        }
+    
+        // Verify file size - 5MB maximum
+        $maxsize = 5 * 1024 * 1024;
+        if ($filesize > $maxsize) {
+            $error_message = "Erreur : La taille du fichier est supérieure à la limite autorisée.";
+        }
+    
+        // Verify MYME type of the file
+        if (in_array($filetype, $allowed)) {
+           
+            if (file_exists("../profil_image/" . $_FILES["image"]["name"])) {
+                $error_message = $_FILES["image"]["name"] . " existe déjà.";
+            } else {
+                if (move_uploaded_file($_FILES["image"]["tmp_name"], "../profil_image/" . $_FILES["image"]["name"])) {
+                    $image = "../profil_image/" . $_FILES["image"]["name"];
+                } else {
+                    $error_message = "Désolé, une erreur s'est produite lors de l'upload de votre fichier.";
+                }
+            }
+        } else {
+            $error_message = "Erreur : Il y a eu un problème avec l'upload de votre fichier. Veuillez réessayer."; 
+        }
+    }
+    
+    if (!isset($error_message)) {
+        $result = $reader->updateUser($id, $nom, $prenom, $email, $tel, $image);
+        if ($result) {
+            $success_message = "Profil mis à jour avec succès.";
+            $user_profile = $reader->getUserProfile($id); // Recharger les informations du profil
+        } else {
+            $error_message = "Erreur lors de la mise à jour du profil.";
+        }
+    }
+}
 
+// Gestion de la suppression du profil
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
+    $result = $reader->deleteUser($id);
+    if ($result) {
+        session_destroy();
+        header("Location: logout.php");
+        exit();
+    } else {
+        $error_message = "Erreur lors de la suppression du profil.";
+    }
+}
+
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -213,6 +352,20 @@ function e($value) {
         #favoritesModal small {
             color: #aaa;
         }
+        /* Styles pour le menu profil */
+        .profile-menu {
+            position: relative;
+        }
+        .profile-menu .dropdown-menu {
+            right: 0;
+            left: auto;
+        }
+        .profile-picture {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
@@ -233,8 +386,25 @@ function e($value) {
                             <span class="badge badge-light" id="favoritesCount"><?= count($favorites) ?></span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Déconnexion</a>
+
+                    
+                    <li class="nav-item profile-menu dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <img src="../profil_image/<?= e($user_profile['image']) ?>" alt="Profile Picture" class="profile-picture mr-2 img-fluid rounded-circle" style="width: 30px; height: 30px; object-fit: cover;">
+    <?= e($user_profile['prenom']) ?>
+</a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#profileModal">
+                                <i class="fas fa-user mr-2"></i>Voir Profil
+                            </a>
+                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#editProfileModal">
+                                <i class="fas fa-edit mr-2"></i>Modifier Profil
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="logout.php">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion
+                            </a>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -245,6 +415,12 @@ function e($value) {
         <?php if (isset($error_message)): ?>
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle mr-2"></i><?= e($error_message) ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($success_message)): ?>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle mr-2"></i><?= e($success_message) ?>
             </div>
         <?php endif; ?>
 
@@ -369,6 +545,9 @@ function e($value) {
                            class="btn btn-primary">
                            <i class="fas fa-arrow-left mr-1"></i>Retour aux articles
                         </a>
+                        <a href="?id=<?= $id ?>&download_pdf=1&article_id=<?= $article['id'] ?>" class="btn btn-secondary ml-2">
+                            <i class="fas fa-file-pdf mr-1"></i>Télécharger en PDF
+                        </a>
                     </div>
                 </div>
             </div>
@@ -427,7 +606,8 @@ function e($value) {
                         <?php foreach ($comments as $comment): ?>
                             <div class="comment-box">
                                 <div class="comment-header">
-                                    <img src="<?= e($comment['avatar_url'] ?? '/assets/images/default-avatar.png') ?>" alt="Avatar" class="comment-avatar">
+                                <img src="../../assets/images/<?= htmlspecialchars($user_profile['image']) ?>" alt="Avatar" class="comment-avatar">
+                                    
                                     <h5 class="mb-0">
                                         <?= e(($comment['prenom'] ?? '') . ' ' . ($comment['nom'] ?? '')) ?>
                                     </h5>
@@ -509,27 +689,94 @@ function e($value) {
         </div>
     </div>
 
-    <div class="modal fade" id="commentModal" tabindex="-1" role="dialog" aria-labelledby="commentModalLabel" aria-hidden="true">
+    <!-- Modal du profil -->
+    <div class="modal fade" id="profileModal" tabindex="-1" role="dialog" aria-labelledby="profileModalLabel" aria-hidden="true    ">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="commentModalLabel">Ajouter un commentaire</h5>
+                <h5 class="modal-title" id="profileModalLabel">
+    Profil de 
+    <img src="../profil_image/<?= e($user_profile['image']) ?>" alt="Profile Picture" class="img-fluid rounded-circle" style="width: 30px; height: 30px; object-fit: cover;">
+    <?= e($user_profile['nom']) ?>
+</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form id="commentForm">
-                        <div class="form-group">
-                            <label for="commentText">Votre commentaire</label>
-                            <textarea class="form-control" id="commentText" rows="3" required></textarea>
-                        </div>
-                        <input type="hidden" id="articleId" value="">
-                    </form>
+                <div class="text-center mb-4">
+    <img src="../profil_image/<?= e($user_profile['image']) ?>" alt="Profile Picture" class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+</div>
+                    <p><strong>Nom:</strong> <?= e($user_profile['nom']) ?></p>
+                    <p><strong>Prénom:</strong> <?= e($user_profile['prenom']) ?></p>
+                    <p><strong>Email:</strong> <?= e($user_profile['email']) ?></p>
+                    <p><strong>Téléphone:</strong> <?= e($user_profile['tel']) ?></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                    <button type="button" class="btn btn-primary" id="submitComment">Envoyer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de modification du profil -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProfileModalLabel">Modifier le profil</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form action="" method="post" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="nom">Nom</label>
+                            <input type="text" class="form-control" id="nom" name="nom" value="<?= e($user_profile['nom']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prenom">Prénom</label>
+                            <input type="text" class="form-control" id="prenom" name="prenom" value="<?= e($user_profile['prenom']) ?>" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="<?= e($user_profile['email']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tel">Téléphone</label>
+                            <input type="tel" class="form-control" id="tel" name="tel" value="<?= e($user_profile['tel']) ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="image">Photo de profil</label>
+                            <input type="file" class="form-control-file" id="image" name="image">
+                        </div>
+                        <button type="submit" name="update_profile" class="btn btn-primary">Mettre à jour</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation de suppression du profil -->
+    <div class="modal fade" id="deleteProfileModal" tabindex="-1" role="dialog" aria-labelledby="deleteProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteProfileModalLabel">Confirmer la suppression</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer votre profil ? Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    <form action="" method="post">
+                        <button type="submit" name="delete_profile" class="btn btn-danger">Supprimer mon profil</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -604,6 +851,11 @@ function e($value) {
                 var count = $('#favoritesList').children('.list-group-item').length;
                 $('#favoritesCount').text(count);
             }
+
+            // Ajouter un bouton pour ouvrir le modal de suppression du profil
+            $('#editProfileModal .modal-body').append(
+                '<button type="button" class="btn btn-danger mt-3" data-dismiss="modal" data-toggle="modal" data-target="#deleteProfileModal">Supprimer mon profil</button>'
+            );
         });
     </script>
 </body>

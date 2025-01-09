@@ -67,6 +67,35 @@ class Reader extends User {
         }
     }
 
+
+    function generatePDF($article) {
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor('Your Website');
+        $pdf->SetTitle($article['titre']);
+        $pdf->SetSubject('Article PDF');
+        $pdf->SetKeywords('Article, PDF, Download');
+    
+        $pdf->AddPage();
+    
+        $html = '<h1>' . $article['titre'] . '</h1>';
+        $html .= '<h3>' . $article['description'] . '</h3>';
+        $html .= '<p>' . nl2br($article['contenu']) . '</p>';
+    
+        $pdf->writeHTML($html, true, false, true, false, '');
+    
+        return $pdf->Output('article.pdf', 'S');
+    }
+
+
+    public function getUserProfile($userId) {
+        $query = "SELECT * FROM user_ WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $userId);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function getCategories() {
         try {
             $query = "SELECT DISTINCT nom_categorie FROM article WHERE supprimer = 0 AND nom_categorie IS NOT NULL AND nom_categorie != ''";
