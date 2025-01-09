@@ -52,6 +52,8 @@ class User {
 
     public function register($prenom, $nom, $email, $tel, $password, $post) {
         try {
+
+            //dans cette parte je voulais aussi insder
             $query = "INSERT INTO " . $this->table_name . " 
                       (prenom, nom, email, tel, password, matricule, post, supprime) 
                       VALUES (:prenom, :nom, :email, :tel, :password, :matricule, :post, 0)";
