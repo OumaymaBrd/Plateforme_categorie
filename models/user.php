@@ -18,7 +18,7 @@ class User {
     public function __construct($db) {
         $this->conn = $db;
     }
-
+// 
     public function getUserByMatricule($matricule, $password) {
         try {
             $query = "SELECT * FROM " . $this->table_name . " 
