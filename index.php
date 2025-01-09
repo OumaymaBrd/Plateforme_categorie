@@ -116,11 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                                             <form method="POST" action="">
                                                 <div class="form-group">
                                                     <input type="text" name="prenom" class="form-style" placeholder="Votre Prenom" required>
-                                                    <i class="input-icon uil uil-user"></i>
+                                                    <i class="input-icon uil uil-user-circle"></i>
                                                 </div>    
                                                 <div class="form-group">
                                                     <input type="text" name="nom" class="form-style" placeholder="Votre Nom" required>
-                                                    <i class="input-icon uil uil-user"></i>
+                                                    <i class="input-icon uil uil-users-alt"></i>
                                                 </div>    
                                                 <div class="form-group mt-2">
                                                     <input type="tel" name="tel" class="form-style" placeholder="Votre Num tel" required>
@@ -130,6 +130,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                                                     <input type="email" name="email" class="form-style" placeholder="Email" required>
                                                     <i class="input-icon uil uil-at"></i>
                                                 </div>
+                                                <!-- age -->
+                                                <div class="form-group mt-2">
+                                                    <input type="text" name="age" class="form-style" placeholder="age" required>
+                                                    <i class="input-icon uil uil-calendar-alt"></i>
+                                                </div>
+                                                <!-- image -->
+
+                                                <div class="form-group mt-2">
+                                                    <input type="file" name="image" class="form-style" placeholder="image" required>
+                                                    <i class="input-icon uil uil-image"></i>
+                                                </div>
+                                                <!--  -->
                                                 <div class="form-group mt-2">
                                                     <input type="password" name="password" class="form-style" placeholder="Password" required>
                                                     <i class="input-icon uil uil-lock-alt"></i>
