@@ -292,7 +292,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
             margin-right: 10px;
         }
         .comment-box {
-            background-color: #f8f9fa;
+            background-color: #222;
+            color: #fff;
+            border: 1px solid #444;
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
@@ -313,44 +315,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
         .favorite-icon.active {
             color: #ffc107;
         }
-        /* Style pour le modal des favoris */
-        #favoritesModal .modal-content {
+        /* Style for all modals */
+        .modal-content {
             background-color: #000;
             color: #fff;
         }
-        #favoritesModal .modal-header {
-            border-bottom: 1px solid #333;
-        }
-        #favoritesModal .modal-footer {
-            border-top: 1px solid #333;
-        }
-        #favoritesModal .close {
-            color: #fff;
-        }
-        #favoritesModal .list-group-item {
-            background-color: #222;
+        .modal-header, .modal-footer {
             border-color: #333;
+        }
+        .modal .close {
             color: #fff;
         }
-        #favoritesModal .list-group-item:hover {
+        .modal .btn-secondary {
             background-color: #333;
+            border-color: #444;
         }
-        #favoritesModal .text-muted {
-            color: #aaa !important;
-        }
-        #favoritesModal .btn-outline-danger {
-            color: #dc3545;
-            border-color: #dc3545;
-        }
-        #favoritesModal .btn-outline-danger:hover {
-            color: #fff;
-            background-color: #dc3545;
-        }
-        #favoritesModal .modal-title {
-            color: #fff;
-        }
-        #favoritesModal small {
-            color: #aaa;
+        .modal .btn-secondary:hover {
+            background-color: #444;
+            border-color: #555;
         }
         /* Styles pour le menu profil */
         .profile-menu {
@@ -365,6 +347,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
+        }
+        .text-muted {
+            color: #aaa !important;
+        }
+        #toggleComments {
+            background-color: #007bff;
+            color: #fff;
+        }
+        #toggleComments:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -386,7 +378,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
                             <span class="badge badge-light" id="favoritesCount"><?= count($favorites) ?></span>
                         </a>
                     </li>
-
                     
                     <li class="nav-item profile-menu dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -584,7 +575,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
 
             <!-- Section commentaires -->
             <div class="mt-4">
-                <h3><i class="fas fa-comments mr-2"></i>Commentaires</h3>
+                <?php
+                $comments = $reader->getComments($article['id']);
+                $commentCount = count($comments);
+                ?>
+                <h3>
+                    <i class="fas fa-comments mr-2"></i>Commentaires (<?= $commentCount ?>)
+                    <button id="toggleComments" class="btn btn-sm btn-outline-primary ml-2">
+                        <i class="fas fa-eye"></i> Afficher les commentaires
+                    </button>
+                </h3>
                 
                 <!-- Formulaire d'ajout de commentaire -->
                 <form action="" method="post" class="mb-4">
@@ -599,9 +599,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
                 </form>
 
                 <!-- Liste des commentaires -->
-                <?php
-                $comments = $reader->getComments($article['id']);
-                if (!empty($comments)): ?>
+                <div id="commentsList" style="display: none;">
                     <div class="comments-list">
                         <?php foreach ($comments as $comment): ?>
                             <div class="comment-box">
@@ -634,11 +632,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
                             </div>
                         <?php endforeach; ?>
                     </div>
-                <?php else: ?>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-2"></i>Aucun commentaire pour le moment.
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
         <?php endif; ?>
     </div>
@@ -690,7 +684,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
     </div>
 
     <!-- Modal du profil -->
-    <div class="modal fade" id="profileModal" tabindex="-1" role="dialog" aria-labelledby="profileModalLabel" aria-hidden="true    ">
+    <div class="modal fade" id="profileModal" tabindex="-1" role="dialog" aria-labelledby="profileModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -856,6 +850,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
             $('#editProfileModal .modal-body').append(
                 '<button type="button" class="btn btn-danger mt-3" data-dismiss="modal" data-toggle="modal" data-target="#deleteProfileModal">Supprimer mon profil</button>'
             );
+
+            // Add this to toggle comments visibility
+            $('#toggleComments').click(function() {
+                $('#commentsList').toggle();
+                $(this).find('i').toggleClass('fa-eye fa-eye-slash');
+                $(this).text(function(i, text) {
+                    return text === " Afficher les commentaires" ? " Masquer les commentaires" : " Afficher les commentaires";
+                });
+            });
         });
     </script>
 </body>
