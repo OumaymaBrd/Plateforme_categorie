@@ -16,8 +16,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $tel = trim($_POST['tel']);
     $password = $_POST['password'];
     $post = trim($_POST['post']);
+    $age = isset($_POST['age']) ? (int)$_POST['age'] : null;
+    $image = isset($_FILES['image']) ? $_FILES['image'] : null;
 
-    if ($user->register($prenom, $nom, $email, $tel, $password, $post)) {
+    if ($user->register($prenom, $nom, $email, $tel, $password, $post, $age, $image)) {
         $success_message = "Inscription réussie!";
     } else {
         $error_message = "Erreur lors de l'inscription.";
@@ -36,12 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         } else if ($result['post'] === 'auteur') {
             header("Location: assets/pages/auteur.php?id=" . $result['id_user']);
         } else if ($result['post'] === 'reader') {
-            // Redirect to reader page if needed
-            // header("Location: assets/pages/reader.php");
             header("Location: assets/pages/reader.php?id=" . $result['id_user']);
-        }else if ($result['post'] === 'admin') {
-            
-            header("Location: assets/pages/administration.php");
         }
         exit();
     } else {
@@ -113,37 +110,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                                     <div class="center-wrap">
                                         <div class="section text-center">
                                             <h4 class="mb-3 pb-3">Sign Up</h4>
-                                            <form method="POST" action="">
+                                            <form method="POST" action="" enctype="multipart/form-data">
                                                 <div class="form-group">
-                                                    <input type="text" name="prenom" class="form-style" placeholder="Votre Prenom" required>
-                                                    <i class="input-icon uil uil-user-circle"></i>
+                                                    <input type="text" name="prenom" class="form-style" 
+                                                           placeholder="Votre Prenom" required>
+                                                    <i class="input-icon uil uil-user"></i>
                                                 </div>    
                                                 <div class="form-group">
-                                                    <input type="text" name="nom" class="form-style" placeholder="Votre Nom" required>
+                                                    <input type="text" name="nom" class="form-style" 
+                                                           placeholder="Votre Nom" required>
                                                     <i class="input-icon uil uil-users-alt"></i>
                                                 </div>    
                                                 <div class="form-group mt-2">
-                                                    <input type="tel" name="tel" class="form-style" placeholder="Votre Num tel" required>
+                                                    <input type="tel" name="tel" class="form-style" 
+                                                           placeholder="Votre Num tel" required>
                                                     <i class="input-icon uil uil-phone"></i>
                                                 </div>    
                                                 <div class="form-group mt-2">
-                                                    <input type="email" name="email" class="form-style" placeholder="Email" required>
+                                                    <input type="email" name="email" class="form-style" 
+                                                           placeholder="Email" required>
                                                     <i class="input-icon uil uil-at"></i>
                                                 </div>
-                                                <!-- age -->
                                                 <div class="form-group mt-2">
-                                                    <input type="text" name="age" class="form-style" placeholder="age" required>
+                                                    <input type="number" name="age" class="form-style" 
+                                                           placeholder="Votre Age" required>
                                                     <i class="input-icon uil uil-calendar-alt"></i>
                                                 </div>
-                                                <!-- image -->
-
                                                 <div class="form-group mt-2">
-                                                    <input type="file" name="image" class="form-style" placeholder="image" required>
+                                                    <input type="file" name="image" class="form-style" 
+                                                           accept="image/*">
                                                     <i class="input-icon uil uil-image"></i>
                                                 </div>
-                                                <!--  -->
                                                 <div class="form-group mt-2">
-                                                    <input type="password" name="password" class="form-style" placeholder="Password" required>
+                                                    <input type="password" name="password" class="form-style" 
+                                                           placeholder="Password" required>
                                                     <i class="input-icon uil uil-lock-alt"></i>
                                                 </div>
                                                 <div class="form-group mt-2">
@@ -168,4 +168,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     </div>
 </body>
 </html>
-

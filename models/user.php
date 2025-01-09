@@ -14,11 +14,13 @@ class User {
     public $matricule;
     public $post;
     public $supprime;
+    public $image;
+    public $age;
 
     public function __construct($db) {
         $this->conn = $db;
     }
-// 
+
     public function getUserByMatricule($matricule, $password) {
         try {
             $query = "SELECT * FROM " . $this->table_name . " 
@@ -32,13 +34,15 @@ class User {
                 if($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     if(password_verify($password, $row['password'])) {
                         return array(
-                            'id_user' => $row['id'],  // Map id to id_user for compatibility
+                            'id_user' => $row['id'],
                             'nom' => $row['nom'],
                             'prenom' => $row['prenom'],
                             'email' => $row['email'],
                             'tel' => $row['tel'],
                             'post' => $row['post'],
-                            'matricule' => $row['matricule']
+                            'matricule' => $row['matricule'],
+                            'image' => $row['image'],
+                            'age' => $row['age']
                         );
                     }
                 }
@@ -50,18 +54,31 @@ class User {
         }
     }
 
-    public function register($prenom, $nom, $email, $tel, $password, $post) {
+    public function register($prenom, $nom, $email, $tel, $password, $post, $age, $image = null) {
         try {
+            $upload_dir = __DIR__ . '/../assets/profil_image/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
 
-         
             $query = "INSERT INTO " . $this->table_name . " 
-                      (prenom, nom, email, tel, password, matricule, post, supprime) 
-                      VALUES (:prenom, :nom, :email, :tel, :password, :matricule, :post, 0)";
+                      (prenom, nom, email, tel, password, matricule, post, supprime, age, image) 
+                      VALUES (:prenom, :nom, :email, :tel, :password, :matricule, :post, 0, :age, :image)";
 
             $stmt = $this->conn->prepare($query);
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $matricule = $this->generateMatricule($post);  // Updated to use post parameter
+            $matricule = $this->generateMatricule($post);
+
+            $image_filename = null;
+            if ($image && $image['error'] === UPLOAD_ERR_OK) {
+                $image_info = getimagesize($image['tmp_name']);
+                if ($image_info !== false) {
+                    $image_filename = uniqid() . '_' . basename($image['name']);
+                    $upload_path = $upload_dir . $image_filename;
+                    move_uploaded_file($image['tmp_name'], $upload_path);
+                }
+            }
 
             $stmt->bindParam(":prenom", $prenom);
             $stmt->bindParam(":nom", $nom);
@@ -70,6 +87,8 @@ class User {
             $stmt->bindParam(":password", $hashed_password);
             $stmt->bindParam(":matricule", $matricule);
             $stmt->bindParam(":post", $post);
+            $stmt->bindParam(":age", $age);
+            $stmt->bindParam(":image", $image_filename);
 
             if($stmt->execute()) {
                 return true;
@@ -87,19 +106,38 @@ class User {
         return $prefix . substr($unique, -5);
     }
 
-    public function updateProfile($id, $prenom, $nom, $email, $tel) {
+    public function updateProfile($id, $prenom, $nom, $email, $tel, $age, $image = null) {
         try {
             $query = "UPDATE " . $this->table_name . " 
-                      SET prenom = :prenom, nom = :nom, email = :email, tel = :tel 
-                      WHERE id = :id AND supprime = 0";
+                      SET prenom = :prenom, nom = :nom, email = :email, tel = :tel, age = :age";
+            
+            $params = [
+                ":prenom" => $prenom,
+                ":nom" => $nom,
+                ":email" => $email,
+                ":tel" => $tel,
+                ":age" => $age,
+                ":id" => $id
+            ];
+
+            if ($image && $image['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = __DIR__ . '/../assets/profil_image/';
+                $image_filename = uniqid() . '_' . basename($image['name']);
+                $upload_path = $upload_dir . $image_filename;
+                
+                if (move_uploaded_file($image['tmp_name'], $upload_path)) {
+                    $query .= ", image = :image";
+                    $params[":image"] = $image_filename;
+                }
+            }
+
+            $query .= " WHERE id = :id AND supprime = 0";
 
             $stmt = $this->conn->prepare($query);
 
-            $stmt->bindParam(":prenom", $prenom);
-            $stmt->bindParam(":nom", $nom);
-            $stmt->bindParam(":email", $email);
-            $stmt->bindParam(":tel", $tel);
-            $stmt->bindParam(":id", $id);
+            foreach ($params as $key => &$val) {
+                $stmt->bindParam($key, $val);
+            }
 
             if($stmt->execute()) {
                 return true;
@@ -134,4 +172,3 @@ class User {
     }
 }
 ?>
-
