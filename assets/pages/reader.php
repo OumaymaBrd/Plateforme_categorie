@@ -358,6 +358,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
         #toggleComments:hover {
             background-color: #0056b3;
         }
+        /* Styles for favorites modal */
+        #favoritesModal .modal-content {
+            background-color: #000;
+            color: #fff;
+        }
+        #favoritesModal .list-group-item {
+            background-color: #222;
+            border-color: #333;
+            color: #fff;
+        }
+        #favoritesModal .list-group-item:hover {
+            background-color: #333;
+        }
+        #favoritesModal .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        #favoritesModal .btn-outline-danger:hover {
+            color: #fff;
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -664,9 +685,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_profile'])) {
                                                 <i class="fas fa-tag mr-1"></i><?= e($favorite['nom_categorie']) ?>
                                             </small>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-danger remove-favorite" data-article-id="<?= $favorite['id'] ?>">
-                                            <i class="fas fa-trash"></i> Retirer
-                                        </button>
+                                        
                                     </div>
                                     <a href="?id=<?= $id ?>&view_article=<?= $favorite['id'] ?>" 
                                        class="stretched-link" 
